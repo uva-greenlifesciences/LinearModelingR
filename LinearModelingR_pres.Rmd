@@ -46,7 +46,7 @@ The column of ones incorporates the intercept term. R makes it easy to visualize
 
 ## Estimating $\mathbf{\beta}$
 
-The best estimate minimizes the sum of squared errors. 2D example: line with intercept $\hat{\beta_{0}}$ and slope $\hat{\beta_{1}}$ with squared and summed distances of red lines (ie, errors) as small as possible.
+The best estimate minimizes the sum of squared errors. 2D example: line with intercept $\hat{\beta_{0}}$ and slope $\hat{\beta_{1}}$ with squared and summed distances of red lines (ie, residuals) as small as possible.
 
 ```{r, echo=FALSE}
 x <- seq(1,10)

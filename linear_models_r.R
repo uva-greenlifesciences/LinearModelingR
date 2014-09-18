@@ -80,13 +80,12 @@ hist(pros$psa) # skewed right
 # a log transformatio may fix this:
 hist(log(pros$psa))
 
-# update data frame so response is log transformed:
-pros$psa <- log(pros$psa)
-pairs(pros)
+# add log transformed psa to data frame:
+pros$logpsa <- log(pros$psa)
 
 # fit model using all variables
 # the plus (+) sign means "include" in model
-m1 <- lm(psa ~ volume + weight + age + bph + svi + cap.pen + gleason.score, data=pros)
+m1 <- lm(logpsa ~ volume + weight + age + bph + svi + cap.pen + gleason.score, data=pros)
 m1
 
 # Note: the response is log transformed, so interpretation of coefficients changes.
@@ -128,8 +127,7 @@ e <- residuals(m1)
 X %*% B + e
 Y <- X%*%B + e
 # compare to original values
-cbind(pros$psa,Y)
-
+cbind(pros$logpsa,Y)
 
 
 # confidence intervals ----------------------------------------------------
@@ -155,45 +153,44 @@ predict(m1, newdata=new.data, interval = "confidence")
 predict(m1, newdata=new.data, interval = "prediction")
 
 # In two-dimensions (1 predictor), we can plot these as confidence bands
-m2d <- lm(psa ~ volume, data=pros)
+m2d <- lm(logpsa ~ volume, data=pros)
 new.data <- data.frame(volume=seq(min(pros$volume),
                                   max(pros$volume),
                                   length.out = 100))
 p.conf <- predict(m2d, newdata=new.data, interval = "confidence")
 p.pred <- predict(m2d, newdata=new.data, interval = "prediction")
-plot(psa ~ volume, data=pros)
+plot(logpsa ~ volume, data=pros)
 matlines(new.data$volume, p.conf, lty=c(1,2,2), col="black")
 matlines(new.data$volume, p.pred, lty=c(1,3,3), col="black")
-
 
 
 # model formula and specifications ----------------------------------------
 
 
 # recall previous model
-m1 
-
+m1$call 
+m1
 # this does the same thing:
-m1 <- lm(psa ~ ., data=pros)
+m1 <- lm(logpsa ~ ., data=pros)
 m1
 
 # model with volume and weight and their interaction
-m2 <- lm(psa ~ volume + weight + volume:weight, data=pros)
+m2 <- lm(logpsa ~ volume + weight + volume:weight, data=pros)
 summary(m2)
 # same thing
-m2 <- lm(psa ~ volume*weight, data=pros)
+m2 <- lm(logpsa ~ volume*weight, data=pros)
 summary(m2)
 
 # model with 3 predictors and all 2-way interactions
-m3 <- lm(psa ~ (volume + weight + age)^2, data=pros)
+m3 <- lm(logpsa ~ (volume + weight + age)^2, data=pros)
 summary(m3)
 
 # ploynomial regression
-m4 <- lm(psa ~ volume + I(volume^2), data=pros)
+m4 <- lm(logpsa ~ volume + I(volume^2), data=pros)
 summary(m4)
 
 # plot polynomial regression
-plot(psa ~ volume, data=pros)
+plot(logpsa ~ volume, data=pros)
 new.data <- data.frame(volume=seq(min(pros$volume),
                                   max(pros$volume),
                                   length.out = 100))
@@ -292,17 +289,17 @@ summary(m2)
 # best subset, forward and backward selection
 library(leaps)
 # best subset
-regfit.sub <- regsubsets(psa ~ ., data=pros)
+regfit.sub <- regsubsets(logpsa ~ ., data=pros)
 summary(regfit.sub)
 plot(regfit.sub, main="best subset")
 
 # forward selection
-regfit.fwd <- regsubsets(psa ~ ., data=pros, method="forward")
+regfit.fwd <- regsubsets(logpsa ~ ., data=pros, method="forward")
 summary(regfit.fwd)
 plot(regfit.fwd, main="forward selection")
 
 # backward selection
-regfit.bwd <- regsubsets(psa ~ ., data=pros, method="backward")
+regfit.bwd <- regsubsets(logpsa ~ ., data=pros, method="backward")
 summary(regfit.bwd)
 plot(regfit.bwd, main="backward selection")
 
@@ -320,7 +317,7 @@ coef(regfit.bwd, id=4)
 # one way to check fit:
 # a good fit will lie close to line with slope 1 and intercept 0
 par(mfrow=c(1,1))
-plot(pros$psa, fitted(m2),
+plot(pros$logpsa, fitted(m2),
      xlim=c(0,5),ylim=c(0,5),
      xlab="Observed",ylab="Fitted")
 abline(a=0,b=1,lty=2)
@@ -343,18 +340,18 @@ summary(pros$gleason.score)
 summary(pros$svi)
 # summary stats
 # mean psa for each gleason.score group and boxplots
-aggregate(psa ~ gleason.score, pros, mean)
-boxplot(psa ~ gleason.score, pros)
+aggregate(logpsa ~ gleason.score, pros, mean)
+boxplot(logpsa ~ gleason.score, pros)
 # mean psa for each svi group and boxplots
-aggregate(psa ~ svi, pros, mean)
-boxplot(psa ~ svi, pros)
+aggregate(logpsa ~ svi, pros, mean)
+boxplot(logpsa ~ svi, pros)
 
 # verify gleason.score is factor
 class(pros$gleason.score)
 is.factor(pros$gleason.score)
 
 # linear models with gleason.score (aka, ANOVA)
-fm1 <- lm(psa ~ gleason.score, pros)
+fm1 <- lm(logpsa ~ gleason.score, pros)
 summary(fm1)
 anova(fm1)
 
@@ -362,49 +359,49 @@ anova(fm1)
 # linear model where gleason.score interacted with svi (factor:factor)
 
 # plot interaction of factors:
-boxplot(psa ~ gleason.score * svi, data=pros)
+boxplot(logpsa ~ gleason.score * svi, data=pros)
 interaction.plot(x.factor = pros$gleason.score,
                  trace.factor = pros$svi,
-                 response = pros$psa)
-aggregate(psa ~ gleason.score * svi, data=pros, mean)
+                 response = pros$logpsa)
+aggregate(logpsa ~ gleason.score * svi, data=pros, mean)
 table(pros$gleason.score, pros$svi)
 
 # fit linear model (aka, 2-factor ANOVA)
-fm3 <- lm(psa ~ gleason.score * svi, pros)
+fm3 <- lm(logpsa ~ gleason.score * svi, pros)
 summary(fm3)
 
 
 # linear model where gleason.score interacted with volume (factor:numeric)
 
 # plot interaction of factor and numeric:
-plot(psa ~ volume, data=pros, col=as.integer(gleason.score))
-coplot(psa ~ volume | gleason.score, data=pros, rows = 1)
+plot(logpsa ~ volume, data=pros, col=as.integer(gleason.score))
+coplot(logpsa ~ volume | gleason.score, data=pros, rows = 1)
 # or using ggplot (makes it easy to include smooth regression lines)
 library(ggplot2)
-ggplot(pros, aes(x=volume,y=psa)) + 
+ggplot(pros, aes(x=volume,y=logpsa)) + 
   geom_point() + geom_smooth() + facet_wrap(~gleason.score)
 # plot both smooth and linear lines
-ggplot(pros, aes(x=volume,y=psa)) + 
+ggplot(pros, aes(x=volume,y=logpsa)) + 
   geom_point() + geom_smooth(se=F) + geom_smooth(method="lm",se=F,color="red") + 
   facet_wrap(~gleason.score)
 
 
 # now fit the model (difference in slopes for each level of gleason.score?)
-fm4 <- lm(psa ~ gleason.score*volume, pros)
+fm4 <- lm(logpsa ~ gleason.score*volume, pros)
 summary(fm4)
 # slope not 0, but no significant difference in slopes
 # confidence interval for volume
 confint(fm4,"volume")
 
 # plot results
-plot(psa ~ volume, data=pros, col=as.integer(gleason.score))
+plot(logpsa ~ volume, data=pros, col=as.integer(gleason.score))
 abline(coef(fm4)[1],b=coef(fm4)[4])
 abline(coef(fm4)[1]+coef(fm4)[2],b=coef(fm4)[4]+coef(fm4)[5],col=2)
 abline(coef(fm4)[1]+coef(fm4)[3],b=coef(fm4)[4]+coef(fm4)[6],col=3)
 legend("bottomright",legend = levels(pros$gleason.score), lty=1, col=1:3, title = "gleason score")
 
 # a little easier with ggplot
-ggplot(pros, aes(x=volume, y=psa, col=gleason.score)) + geom_point() +
+ggplot(pros, aes(x=volume, y=logpsa, col=gleason.score)) + geom_point() +
   geom_smooth(method="lm", se=F)
 
 
@@ -412,7 +409,7 @@ ggplot(pros, aes(x=volume, y=psa, col=gleason.score)) + geom_point() +
 
 
 # all data
-lm.all <- lm(psa ~ volume + bph + svi + gleason.score, data=pros)
+lm.all <- lm(logpsa ~ volume + bph + svi + gleason.score, data=pros)
 summary(lm.all)
 
 # calculate MSE:
@@ -430,10 +427,10 @@ for(i in 1:1000){
   # randomly sample row numbers
   train <- sample(nrow(pros), round(0.5*nrow(pros)))
   # build model using only "train" data
-  lm.train <- lm(psa ~ volume + bph + svi + gleason.score, data=pros, 
+  lm.train <- lm(logpsa ~ volume + bph + svi + gleason.score, data=pros, 
                  subset=train)
   # test error estimate
-  mse[i] <- mean((pros$psa - predict(lm.train, pros))[-train]^2)
+  mse[i] <- mean((pros$logpsa - predict(lm.train, pros))[-train]^2)
 }
 mean(mse)
 sqrt(mean(mse))
@@ -449,7 +446,7 @@ sqrt(mean(mse))
 # fit model using glm() and then use cv.glm() function in boot package
 
 library(boot) # for cv.glm()
-glm.all <-  glm(psa ~ volume + bph + svi + gleason.score, data=pros)
+glm.all <-  glm(logpsa ~ volume + bph + svi + gleason.score, data=pros)
 summary(glm.all)
 # do 5-fold cross validation
 cv.mse <- cv.glm(pros, glm.all, K=5)$delta # the first number is mean MSE
