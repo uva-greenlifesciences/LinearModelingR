@@ -1,70 +1,93 @@
+# Linear Modeling in R
 # Clay Ford
 # UVA StatLab
 # Fall 2014
-
-# Linear Modeling in R
 
 # Tips:
 # 1. Ctrl + Enter to submit commands
 # 2. Use Tab to complete a command
 
+# packages used in this workshop
+install.packages("car")
+install.packages("arm")
+install.packages("visreg")
+install.packages("leaps")
+install.packages("ggplot2")
+install.packages("boot")
+
+
 # simple linear regression ------------------------------------------------
 
+# let's use a data set that comes with R: cars
+# Speed and Stopping Distances of Cars
 
-# generate some data
-x <- seq(1,10,length.out = 100)
-set.seed(1) # so I always get same random numbers
-# y = 3 + 2*x + error
-y <- 3 + 2*x + rnorm(n=100,mean=0,sd=2)
-plot(x,y, xlab="predictor", ylab="response")
+# investigate data
+str(cars)
+summary(cars)
 
-# We know the process that gave rise to this data:
-# y = 3 + 2*x + error
-# beta_0 = 3 (intercept)
-# beta_1 = 2 (slope)
-# error = value from Normal dist'n with mean 0 and SD 2.
+# scatter plot
+plot(dist ~ speed, data=cars)
 
-# But in real life we don't know this information,
-# so we work backwards to figure it out:
+# scatterplot from the car package
+library(car)
+scatterplot(dist ~ speed, data=cars)
 
-# fit the model and save to "slr"
-# Note: intercept assumed
-slr <- lm(y ~ x) 
-slr
-# view model summary
-summary(slr)
-# plot fitted line (can only do for simple linear regression)
-abline(slr,col="red")
-# plot original line with intercept 3 and slope 2
-abline(a = 3,b = 2,col="blue")
+# distribution of response
+hist(cars$dist)
 
-# see the fitted values (ie, what our model predicts)
-fitted(slr)
-# plot fitted points if you want
-points(x,fitted(slr),pch=19,col="red") 
-# see the residuals (observed y - predicted y)
-residuals(slr)
-# plot distance between fitted and observed
-segments(x,y,x,fitted(slr),col="red") 
+# regress distance on speed using lm() function
+cars.lm <- lm(dist ~ speed, data=cars)
+summary(cars.lm)
 
-# calculate the first residual
-# residual = observed response - predicted response
-y[1] - fitted(slr)[1]
+# Interpretation: every 1 mph increase in speed leads to about 4 additional feet
+# in stopping distance. What about the intercept?
 
-# Missing data means the case is dropped from the analysis:
-# set 5th value of x to NA ("Not Available")
-x[5] <- NA
-summary(lm(y ~ x))
-# note the message: "1 observation deleted due to missingness"
+# Extractor functions:
+# model coefficients (ie, the betas)
+coef(cars.lm)
 
+# fitted value (ie, what the model predicts)
+fitted(cars.lm)
 
-# a more realistic example:
+# see anything funny with the first two?
+
+# residuals (ie, difference between observed and predicted values)
+resid(cars.lm)
+
+# plot fitted regression line
+plot(dist ~ speed, data=cars)
+abline(cars.lm)
+# note: abline() only works for simple linear regression
+
+# can also use scatterplot
+scatterplot(dist ~ speed, data=cars, smooth = FALSE, boxplots = FALSE)
+
+# multiple linear regression ----------------------------------------------
+
 # prostate cancer data (from Applied Linear Statistical Models, 5th ed)
+# A study on 97 men with prostate cancer who were due to receive a 
+# radical prostatectomy.
+
+# psa - prostate specific antigen
+# volume - cancer volume
+# weight - prostate weight
+# age - age of patient
+# bph - benign prostatic hyperplasia amount
+# svi - seminal vesicle invasion
+# cap.pen - capsular penetration
+# gleason.score - Gleason score
+
+# can we model PSA as a linear function of other variables?
 pros <- read.csv("data/prostate.csv")
 summary(pros)
 names(pros)
 str(pros)
 pairs(pros)
+
+# scatterplotMatrix from the car package
+scatterplotMatrix(pros)
+scatterplotMatrix(pros[,c(1:4)])
+
 # some observations:
 # svi appears to be a factor with levels of 0 and 1
 # gleason score is discrete
@@ -74,60 +97,41 @@ summary(pros$weight)
 summary(pros$bph)
 hist(pros$bph)
 
-# check distribution of response
+# check distribution of PSA, our response
 hist(pros$psa) # skewed right
 # recall assumption that response is Normally distributed;
-# a log transformatio may fix this:
+# a log transformation may fix this:
 hist(log(pros$psa))
 
 # add log transformed psa to data frame:
 pros$logpsa <- log(pros$psa)
 
+# drop psa from data frame
+pros$psa <- NULL
+
+# volume, weight, bph, cap.pen might benefit from log transformation.
+
 # fit model using all variables
 # the plus (+) sign means "include" in model
-m1 <- lm(logpsa ~ volume + weight + age + bph + svi + cap.pen + gleason.score, data=pros)
-m1
-
-# Note: the response is log transformed, so interpretation of coefficients changes.
-# To interpret volume coefficient, exponentiate: exp(0.07) = 1.07,
-# so an increase in one unit of weight corresponds to about a 7% increase in PSA.
+m1 <- lm(logpsa ~ volume + weight + age + bph + svi + 
+           cap.pen + gleason.score, data=pros)
+summary(m1)
+# Note: the response is log transformed, so interpretation of coefficients
+# changes. To interpret volume coefficient, exponentiate: exp(0.07) = 1.07, so
+# an increase in one unit of volume corresponds to about a 7% increase in PSA.
 
 # use extractor functions to see model results:
-summary(m1)
 coef(m1)
-fitted(m1)
-residuals(m1)
-deviance(m1) # RSS
-df.residual(m1) # degrees of freedom (n - p)
-
-# calculate RSS "by hand"
-# = sqrt(RSS/(n-p))
-sum(residuals(m1)^2)
+fitted(m1) # on log sacle
+exp(fitted(m1)) # transformed back to original scale
 
 # what about standard errors, R-squared? How to extract those?
 # save the summary
 m1s <- summary(m1)
 names(m1s)
 m1s$coefficients
-m1s$coefficients[,3] # standard errors
 m1s$r.squared
 m1s$sigma # residual standard error
-
-# Recall the matrix notation: Y = XB + e
-# we can extract those matrices and vectors in R:
-model.matrix(m1)
-X <- model.matrix(m1)
-coef(m1)
-B <- coef(m1)
-residuals(m1)
-e <- residuals(m1)
-
-# confirm the linear model formula:
-# Note: %*% means matrix multiplication
-X %*% B + e
-Y <- X%*%B + e
-# compare to original values
-cbind(pros$logpsa,Y)
 
 
 # confidence intervals ----------------------------------------------------
@@ -142,35 +146,46 @@ confint(m1,"volume")
 library(arm)
 coefplot(m1)
 # include intercept and draw a box around the plot
-coefplot(m1, frame.plot=TRUE, intercept=TRUE)
-
+coefplot(m1, frame.plot=TRUE)
 
 # confidence intervals for predictions
-# first need to generate "new" data;
-# create new data set consisting of means of original data
-new.data <- data.frame(lapply(pros,mean))
-predict(m1, newdata=new.data, interval = "confidence")
-predict(m1, newdata=new.data, interval = "prediction")
+
+# first need to generate new data.
+# the predict() function requires that new data be in data frame.
+# here we create a data frame with one row (ie, one person)
+pros.new <- with(pros, data.frame(volume=median(volume),
+                                  weight=median(weight),
+                                  age=mean(age), 
+                                  bph=median(bph),
+                                  svi=0, 
+                                  cap.pen=median(cap.pen),
+                                  gleason.score=6))
+pros.new
+
+# predict logpsa using "new" data:
+# predicted mean with interval
+pred.mean <- predict(m1, newdata=pros.new, interval = "confidence")
+pred.mean
+exp(pred.mean)
+# predicted value with interval
+pred.val <- predict(m1, newdata=pros.new, interval = "prediction")
+pred.val
+exp(pred.val)
 
 # In two-dimensions (1 predictor), we can plot these as confidence bands
-m2d <- lm(logpsa ~ volume, data=pros)
-new.data <- data.frame(volume=seq(min(pros$volume),
-                                  max(pros$volume),
-                                  length.out = 100))
-p.conf <- predict(m2d, newdata=new.data, interval = "confidence")
-p.pred <- predict(m2d, newdata=new.data, interval = "prediction")
-plot(logpsa ~ volume, data=pros)
-matlines(new.data$volume, p.conf, lty=c(1,2,2), col="black")
-matlines(new.data$volume, p.pred, lty=c(1,3,3), col="black")
+plot(dist ~ speed, data=cars)
+# visreg package makes this easy:
+library(visreg)
+visreg(cars.lm)
 
 
 # model formula and specifications ----------------------------------------
 
-
 # recall previous model
 m1$call 
 m1
-# this does the same thing:
+# this fits the same model:
+# drop psa and fit everything else in the data frame
 m1 <- lm(logpsa ~ ., data=pros)
 m1
 
@@ -185,149 +200,17 @@ summary(m2)
 m3 <- lm(logpsa ~ (volume + weight + age)^2, data=pros)
 summary(m3)
 
-# ploynomial regression
+# polynomial regression: need to use use I()
 m4 <- lm(logpsa ~ volume + I(volume^2), data=pros)
 summary(m4)
 
 # plot polynomial regression
-plot(logpsa ~ volume, data=pros)
-new.data <- data.frame(volume=seq(min(pros$volume),
-                                  max(pros$volume),
-                                  length.out = 100))
-outy <- predict(m4, newdata = new.data)
-lines(new.data$volume, outy, lty=1, col="blue")
-
-
-
-# regression diagnostics --------------------------------------------------
-
-# visual diagnostics
-plot(m1)
-
-# make all plots fit in one graphic
-par(mfrow=c(2,2)) 
-plot(m1)
-par(mfrow=c(1,1)) # restore to previous setting
-
-# what's up with observation 32?
-pros[32,]
-
-# check independence assumption (or try to anyway since we don't have time variables)
-# plot residuals against all variables and look for patterns
-plot(residuals(m1) ~ ., data=pros)
-
-
-# check for influential values
-im.out <- influence.measures(m1)
-im.out
-summary(im.out)
-# observation 32 looks particularly influential in log transformed model
-
-# check for collinearity
-# use vif() from the faraway package
-library(faraway)
-vif(m1)
-
-
-
-# Model Selection ---------------------------------------------------------
-
-
-# updating models
-summary(m1)
-# create new model without weight
-m2 <- update(m1, . ~ . - weight)
-# compare models using anova()
-# syntax: anova(smaller model, larger model)
-anova(m2,m1)
-
-# Result: fail to reject null; smaller model fits just as well as larger model
-# Note the p-value matches the summary output
-
-# Usually use anova for something like this,
-# drop all variables except volume and svi
-m2 <- update(m1, . ~ . - weight - age - cap.pen)
-summary(m2)
-anova(m2, m1)
-
-# Result: fail to reject null; smaller model fits just as well as larger model
-
-
-# Using AIC to select a model
-step.out <- step(m1)
-step.out
-summary(step.out) # final model
-# same as what we selected using anova()
-step.out$anova # log of selection
-extractAIC(m1)
-extractAIC(update(m1,.~.-weight))
-
-# check diagnostics
-par(mfrow=c(2,2))
-plot(m2)
-# check for influential values
-summary(influence.measures(m2))
-# obs 32 no longer influential but 94 looks interesting...
-
-
-# fit model without obs 94
-m2a <- update(m2, . ~ . , subset= -94) 
-summary(m2)
-summary(m2a)
-plot(m2a)
-
-# Better? Worth it? What do we think? Judgment call.
-# my call: leave it in
-
-# returning to updated model with all observations:
-summary(m2)
-# lots of stars, but examine effect size.
-# practically or just statistically significant?
-# use judgment. 
-
-
-# best subset, forward and backward selection
-library(leaps)
-# best subset
-regfit.sub <- regsubsets(logpsa ~ ., data=pros)
-summary(regfit.sub)
-plot(regfit.sub, main="best subset")
-
-# forward selection
-regfit.fwd <- regsubsets(logpsa ~ ., data=pros, method="forward")
-summary(regfit.fwd)
-plot(regfit.fwd, main="forward selection")
-
-# backward selection
-regfit.bwd <- regsubsets(logpsa ~ ., data=pros, method="backward")
-summary(regfit.bwd)
-plot(regfit.bwd, main="backward selection")
-
-# all select the same "best" model;
-# extract coefficients for best model:
-which.min(summary(regfit.sub)$bic)
-which.min(summary(regfit.fwd)$bic)
-which.min(summary(regfit.bwd)$bic)
-
-coef(regfit.sub, id=4)
-coef(regfit.fwd, id=4)
-coef(regfit.bwd, id=4)
-
-
-# one way to check fit:
-# a good fit will lie close to line with slope 1 and intercept 0
-par(mfrow=c(1,1))
-plot(pros$logpsa, fitted(m2),
-     xlim=c(0,5),ylim=c(0,5),
-     xlab="Observed",ylab="Fitted")
-abline(a=0,b=1,lty=2)
-# biased predictions for small values 
-
+visreg(m4)
 
 
 # factors and contrasts ---------------------------------------------------
 
-
+# Gleason score and svi could be treated as factors instead of numbers
 pros$gleason.score
 summary(pros$gleason.score)
 pros$svi
@@ -338,6 +221,10 @@ pros$svi <- factor(pros$svi)
 
 summary(pros$gleason.score) 
 summary(pros$svi)
+
+# Note: when a variable is all zeros and ones, making it a factor won't change
+# its model coefficient. 
+
 # summary stats
 # mean psa for each gleason.score group and boxplots
 aggregate(logpsa ~ gleason.score, pros, mean)
@@ -363,52 +250,233 @@ boxplot(logpsa ~ gleason.score * svi, data=pros)
 interaction.plot(x.factor = pros$gleason.score,
                  trace.factor = pros$svi,
                  response = pros$logpsa)
+# does not appear to be evidence of interaction
+
+# means of interacted factors
 aggregate(logpsa ~ gleason.score * svi, data=pros, mean)
+# counts of interacted factors
 table(pros$gleason.score, pros$svi)
 
-# fit linear model (aka, 2-factor ANOVA)
+# fit linear model with gleason score and svi (aka, 2-factor ANOVA)
 fm3 <- lm(logpsa ~ gleason.score * svi, pros)
 summary(fm3)
-
+anova(fm3)
 
 # linear model where gleason.score interacted with volume (factor:numeric)
 
 # plot interaction of factor and numeric:
-plot(logpsa ~ volume, data=pros, col=as.integer(gleason.score))
+scatterplot(logpsa ~ volume | gleason.score, data=pros, smooth=F)
+# conditioning plot
 coplot(logpsa ~ volume | gleason.score, data=pros, rows = 1)
-# or using ggplot (makes it easy to include smooth regression lines)
-library(ggplot2)
-ggplot(pros, aes(x=volume,y=logpsa)) + 
-  geom_point() + geom_smooth() + facet_wrap(~gleason.score)
-# plot both smooth and linear lines
-ggplot(pros, aes(x=volume,y=logpsa)) + 
-  geom_point() + geom_smooth(se=F) + geom_smooth(method="lm",se=F,color="red") + 
-  facet_wrap(~gleason.score)
-
+# conditioning plot with smooth line
+coplot(logpsa ~ volume | gleason.score, data=pros, rows = 1, panel=panel.smooth)
 
 # now fit the model (difference in slopes for each level of gleason.score?)
 fm4 <- lm(logpsa ~ gleason.score*volume, pros)
 summary(fm4)
-# slope not 0, but no significant difference in slopes
+# slope not 0, but no significant difference in slopes relationship between
+# logpsa and volume doesn't appear to change for different levels of gleason
+# score.
+
 # confidence interval for volume
 confint(fm4,"volume")
 
 # plot results
-plot(logpsa ~ volume, data=pros, col=as.integer(gleason.score))
-abline(coef(fm4)[1],b=coef(fm4)[4])
-abline(coef(fm4)[1]+coef(fm4)[2],b=coef(fm4)[4]+coef(fm4)[5],col=2)
-abline(coef(fm4)[1]+coef(fm4)[3],b=coef(fm4)[4]+coef(fm4)[6],col=3)
-legend("bottomright",legend = levels(pros$gleason.score), lty=1, col=1:3, title = "gleason score")
-
-# a little easier with ggplot
-ggplot(pros, aes(x=volume, y=logpsa, col=gleason.score)) + geom_point() +
-  geom_smooth(method="lm", se=F)
+visreg(fm4, xvar = "volume", by = "gleason.score")
 
 
-# model validation --------------------------------------------------------
+# regression diagnostics --------------------------------------------------
+
+# let's go back to model m1 (all explanatory variables numeric)
+# visual diagnostics
+plot(m1)
+
+# make all plots fit in one graphic
+par(mfrow=c(2,2)) 
+plot(m1)
+par(mfrow=c(1,1)) # restore to previous setting
+
+# what's up with observation 32?
+pros[32,]
+# very high weight
+
+# check independence assumption (or try to anyway since we don't have time variables)
+# plot residuals against all variables and look for patterns
+plot(residuals(m1) ~ ., data=pros)
 
 
-# all data
+# check for influential values
+im.out <- influence.measures(m1)
+im.out
+summary(im.out)
+# observation 32 looks particularly influential in log transformed model
+
+# re-run model without obs 32
+m1b <- update(m1, subset = -32)
+summary(m1b)
+plot(m1b)
+
+# check for collinearity
+# use vif() from the car package
+vif(m1)
+
+
+# Model Selection ---------------------------------------------------------
+
+# let's fit a new model
+pros.lm <- lm(logpsa ~ weight + volume + svi + bph + age, data=pros) 
+
+# updating models
+# original model with all variables and observations
+summary(pros.lm)
+
+# create new model without weight and age
+pros.lm2 <- update(pros.lm, . ~ . - weight - age)
+summary(pros.lm2)
+
+# compare models using anova()
+# syntax: anova(smaller model, larger model)
+anova(pros.lm2,pros.lm)
+
+# Result: fail to reject null; smaller model fits just as well as larger model
+
+
+# Using AIC to select a model
+step.out <- step(pros.lm)
+step.out
+summary(step.out) # final model
+# same as what we selected using anova()
+
+step.out$anova # log of selection
+extractAIC(pros.lm)
+extractAIC(update(pros.lm,.~.-weight -age))
+
+# check diagnostics
+par(mfrow=c(2,2))
+plot(pros.lm2)
+# check for influential values
+summary(influence.measures(pros.lm2))
+
+# obs 94 looks interesting...
+# fit model without obs 94
+pros.lm2a <- update(pros.lm2, subset= -94) 
+summary(pros.lm2a)
+plot(pros.lm2a)
+par(mfrow=c(1,1))
+
+# Better? Worth it? What do we think? Judgment call.
+
+# returning to updated model with all observations:
+summary(pros.lm2)
+# lots of stars, but examine effect size.
+# practically or just statistically significant?
+# use judgment. 
+
+
+
+# Logistic Regression -----------------------------------------------------
+
+# low birth weight data (from Applied Logistic Regression, 2nd ed.)
+# Selected variables:
+# LOW = birth weight < 2500 g (1 = yes, 0 = no)
+# SMOKE = smoking status during pregnancy
+# AGE = age of mother in years
+# RACE = race of mother (1 = white, 2 = black, 3 = other)
+# LWT = weight of mother in pounds
+
+lowbirth <- read.csv("data/lowbirth.csv")
+# define RACE and SMOKE as a factor (ie, a categorical variable)
+lowbirth$RACE <- factor(lowbirth$RACE)
+lowbirth$SMOKE <- factor(lowbirth$SMOKE)
+
+# Is low birth weight related to the factors above?
+
+# fit logistic regression using glm(); note family=binomial
+lb.glm <- glm(LOW ~ AGE + SMOKE + RACE + LWT, data=lowbirth, family=binomial)
+summary(lb.glm)
+
+# predicted probabilities
+fitted(lb.glm) 
+
+# fit logistic model without AGE
+lb2.glm <- update(lb.glm, . ~ . - AGE)
+summary(lb2.glm)
+
+# compare models
+anova(lb2.glm, lb.glm, test = "Chisq")
+
+# Result: smaller model fits just as well as larger model
+
+# Interpretation of coefficients
+coef(lb2.glm) # log odds
+exp(coef(lb2.glm)) # odds ratios
+
+# visualization
+visreg(lb2.glm, scale="response")
+visreg(lb2.glm, "LWT", by="RACE", scale="response")
+visreg(lb2.glm, "LWT", by="SMOKE", scale="response")
+
+
+# Bonus material ----------------------------------------------------------
+
+# simple linear regression using simulated data
+
+# generate some data
+x <- seq(1,10,length.out = 100)
+set.seed(1) # so we all get same random numbers
+# y = 3 + 2*x + error
+y <- 3 + 2*x + rnorm(n=100,mean=0,sd=2)
+plot(x,y, xlab="predictor", ylab="response")
+
+# We know the process that gave rise to this data:
+# y = 3 + 2*x + error
+# beta_0 = 3 (intercept)
+# beta_1 = 2 (slope)
+# error = value from Normal dist'n with mean 0 and SD 2.
+
+# But in real life we don't know this information,
+# so we work backwards to figure it out:
+
+# fit the model and save to "slr"
+# Note: intercept assumed
+slr <- lm(y ~ x) 
+slr
+# view model summary
+summary(slr)
+# plot fitted line (can only do for simple linear regression)
+abline(slr,col="red")
+# plot original line with intercept 3 and slope 2
+abline(a = 3,b = 2,col="blue")
+
+# A Note about missing data:
+# Missing data means the case is dropped from the analysis.
+# set 5th value of x to NA ("Not Available")
+x[5] <- NA
+summary(lm(y ~ x))
+# note the message: "1 observation deleted due to missingness"
+
+# performing matrix calculations in R
+
+# Recall the matrix notation: Y = XB + e
+# we can extract those matrices and vectors in R:
+model.matrix(m1)
+X <- model.matrix(m1)
+coef(m1)
+B <- coef(m1)
+residuals(m1)
+e <- residuals(m1)
+
+# confirm the linear model formula:
+# Note: %*% means matrix multiplication
+X %*% B + e
+Y <- X%*%B + e
+# compare to original values
+cbind(pros$logpsa,Y)
+
+
+# model validation
+
+# fit a model
 lm.all <- lm(logpsa ~ volume + bph + svi + gleason.score, data=pros)
 summary(lm.all)
 
@@ -454,4 +522,69 @@ cv.mse
 sqrt(cv.mse[1])
 
 
+# Model Selection by best subset, forward and backward selection
+library(leaps)
+# best subset
+regfit.sub <- regsubsets(logpsa ~ ., data=pros)
+summary(regfit.sub)
+# bottom line indicates selected variables
+plot(regfit.sub, main="best subset") 
+# top line indicates selected variables
+
+# forward selection
+regfit.fwd <- regsubsets(logpsa ~ ., data=pros, method="forward")
+summary(regfit.fwd)
+plot(regfit.fwd, main="forward selection")
+
+# backward selection
+regfit.bwd <- regsubsets(logpsa ~ ., data=pros, method="backward")
+summary(regfit.bwd)
+plot(regfit.bwd, main="backward selection")
+
+# all select the same "best" model.
+
+# extract coefficients for best model:
+# first identify model with lowest BIC
+which.min(summary(regfit.sub)$bic)
+which.min(summary(regfit.fwd)$bic)
+which.min(summary(regfit.bwd)$bic)
+# now use the model ID to extract coefficients of best model
+coef(regfit.sub, id=4)
+coef(regfit.fwd, id=4)
+coef(regfit.bwd, id=4)
+
+
+# one way to check fit:
+# a good fit will lie close to line with slope 1 and intercept 0
+plot(pros$logpsa, fitted(pros.lm2),
+     xlim=c(0,5),ylim=c(0,5),
+     xlab="Observed",ylab="Fitted")
+abline(a=0,b=1,lty=2)
+# biased predictions for values < 2 and > 4
+
+
+
+# demonstrate odds ratio in logistic regression
+# LWT odds ratio = 0.98
+exp(coef(lb2.glm)[5]) 
+
+# calculate odds ratio by hand
+# predicted probs at LWT=130 and 131
+p1 <- predict(lb2.glm, newdata = data.frame(SMOKE=factor(1), RACE=factor(1), LWT=130), 
+              type = "response")
+p2 <- predict(lb2.glm, newdata = data.frame(SMOKE=factor(1), RACE=factor(1), LWT=131), 
+              type = "response")
+# calculate odds
+odds1 <- (p1/(1-p1))
+odds2 <- (p2/(1-p2))
+
+# odds ratio
+odds2/odds1
+exp(coef(lb2.glm)[5])
+
+# odds decreases by about 1.3% for each 1 pound increase in LWT
+(odds2-odds1)/odds1
+
+
 # END
+
