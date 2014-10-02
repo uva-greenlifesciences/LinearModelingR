@@ -305,20 +305,6 @@ pros[32,]
 plot(residuals(m1) ~ ., data=pros)
 
 
-# check for influential values
-im.out <- influence.measures(m1)
-im.out
-summary(im.out)
-# observation 32 looks particularly influential in log transformed model
-
-# re-run model without obs 32
-m1b <- update(m1, subset = -32)
-summary(m1b)
-plot(m1b)
-
-# check for collinearity
-# use vif() from the car package
-vif(m1)
 
 
 # Model Selection ---------------------------------------------------------
@@ -472,6 +458,23 @@ X %*% B + e
 Y <- X%*%B + e
 # compare to original values
 cbind(pros$logpsa,Y)
+
+# influential values
+
+# check for influential values
+im.out <- influence.measures(m1)
+im.out
+summary(im.out)
+# observation 32 looks particularly influential in log transformed model
+
+# re-run model without obs 32
+m1b <- update(m1, subset = -32)
+summary(m1b)
+plot(m1b)
+
+# check for collinearity
+# use vif() from the car package
+vif(m1)
 
 
 # model validation

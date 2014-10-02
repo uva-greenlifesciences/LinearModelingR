@@ -26,23 +26,6 @@ $$Y_{i} = \beta_{0} +  \beta_{1}X_{i1} + \beta_{2}X_{i2} + \epsilon_{i}$$
 
 _Building a linear model_ means we propose a linear model and then estimate the parameters and the variance of the error term. Above, this means estimating $\beta_{0}, \beta_{1}, \beta_{2}$ and $\sigma^{2}$. This is what we do in R.
 
-## Matrix representation of linear models
-
-Linear models are often represented as matrices/vectors.
-
-$$Y = X\beta + \epsilon$$
-
-For our previous example:
-
-$$\left( \begin{array}{c} y_{1} \\ y_{2} \\ \dots \\ y_{n} \end{array} \right) =   
-  \left( \begin{array}{ccc} 1 & x_{11} & x_{12} \\
-                          1 & x_{21} & x_{22} \\
-                      \dots & \dots & \dots \\
-                      1 & x_{n1} & x_{n2} \end{array} \right) 
-  \left( \begin{array}{c} \beta_{0} \\ \beta_{1} \\ \beta_{2} \end{array} \right) +
-  \left( \begin{array}{c} \epsilon_{1} \\ \epsilon_{2} \\ \dots \\ \epsilon_{n} \end{array} \right)$$
-
-The column of ones incorporates the intercept term. R makes it easy to visualize this representation.
 
 ## Estimating $\mathbf{\beta}$
 
@@ -399,8 +382,6 @@ We check these assumptions using _regression diagnostics_. We assume...
 
 Violations of these assumptions can invalidate our model.
 
-We also need to check for _collinearity_ (correlated predictor variables).
-
 ## Quick visual diagnostics using `plot`
 
 Calling the `plot` function on the model object produces four diagnostic plots.
@@ -426,50 +407,6 @@ par(mfrow=c(1,1))
 2. Normal Q-Q: points should lie close to diagonal line
 3. Scale-Location: should have a horizontal line with uniform scatter of point; (_similar to #1 but easier to detect trend in dispersion_)
 4. Residuals vs Leverage: points should lie _within_ contour lines
-
-## Checking independence assumption
-
-To check independence, plot residuals against...
-
-- time variables present (e.g., order of observation)
-- spatial variables 
-- predictors used in the model 
-
-A pattern that is not random suggests lack of independence.
-
-
-## Measures of influence
-
-Calling the `influence.measures` function on a model object produces a table of various influence measures, including DFBETAS, DFFITS, covariance ratios, Cook's distances, and hat matrix values.
-
-Calling `summary` on a saved `influence.measures` object will identify influential cases.
-
-Cases which are influential with respect to any of these measures are marked with an asterisk.
-
-```
-im.out <- influence.measures(model.object)
-summary(im.out)
-```
-
-## The meanings of "measure of influence"
-
-- DFBETAS: measures influence that case _i_ has on each regression coefficient
-- DFFITS: measures influence that case _i_ has on fitted value $\hat{y_{i}}$
-- covariance ratios: measures influence of case _i_ on standard errors of the regression coefficients
-- Cook's distance: measures influence that case _i_ has on all fitted values 
-- hat matrix: measures _leverage_ of case _i_ (i.e. outlying predictor variables)
-
-Each of these have thresholds that when exceeded suggest an influential case. Let R remember those for you.
-
-## Checking for collinearity
-
-_Variance Inflation Factors_ allow us to detect collinearity.
-
-The `vif` function from the `car` package makes this easy.
-
-`vif(model.object)` returns VIF values.
-
-If any greater than 10, that's an indication of collinearity.
 
 Let's go to R.
 
@@ -538,7 +475,24 @@ Back to the R script.
 
 Sometimes our response is binary: yes/no, success/failure, diseased/non-diseased, etc. Usually coded as 1 and 0.
 
-We use logistic regression to model a binary response.
+We use logistic regression to model the _log odds_ of binary response.
+
+Let $p$ be the probability that response is 1. Then the linear model is
+
+$$log(\frac{p}{1-p}) = \beta_0 + \beta_1 x_1 + \cdots + \beta_k x_k$$
+
+
+## Converting log odds to probability
+
+We usually transform log odds to probability when making predictions.
+
+Say $log(\frac{p}{1-p}) = x$. We transform to probability as follows:
+
+$$p = \frac{e^x}{1 + e^x}$$
+
+R can easily do this for us.
+
+## Doing Logistic Regression in R
 
 Logistic regression is a type of _generalized linear model_ (GLM).
 
@@ -546,17 +500,9 @@ We fit GLM models in R using the `glm()` function. It works like the `lm()` func
 
 Logistic regression requires `family=binomial`.
 
-## Interpreting Logistic Regression coefficients
-
-Logistic regression coefficients give the change in the _log odds_ of the outcome for a one unit increase in the predictor variable.
-
-Exponentiate coefficient to get the _odds ratio_.
-
-Example: say logistic regression coefficient of $X1$ is 1.06. $exp(1.06) = 2.89$, which says that for a one unit increase in X1 the odds of response = 1 is 2.89 times higher than for  response = 0.  
-
-odds = $p / (1-p)$
-
-odds ratio = $\frac{ p_{1} / (1 - p_{1}) }{ p_{2} / (1 - p_{2}) }$
+`mod <- glm(y ~ x, data=yourdata, family=binomial)`  
+`summary(mod)`  
+`fitted(mod) # gives predicted probabilities`
 
 Let's go to R.
 
