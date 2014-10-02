@@ -1,0 +1,196 @@
+---
+title: "Linear Modeling in R - Bonus Material"
+author: "Clay Ford"
+date: "October 2014"
+output: beamer_presentation
+---
+
+## Bonus Material
+
+What follows is material I had planned for the workshop but then had to edit out due to  time limitations.
+
+The R code for this material is at the bottom of the R script in the section "Bonus Material."
+
+## Matrix representation of linear models
+
+Linear models are often represented as matrices/vectors.
+
+$$Y = X\beta + \epsilon$$
+
+For our previous example:
+
+$$\left( \begin{array}{c} y_{1} \\ y_{2} \\ \dots \\ y_{n} \end{array} \right) =   
+  \left( \begin{array}{ccc} 1 & x_{11} & x_{12} \\
+                          1 & x_{21} & x_{22} \\
+                      \dots & \dots & \dots \\
+                      1 & x_{n1} & x_{n2} \end{array} \right) 
+  \left( \begin{array}{c} \beta_{0} \\ \beta_{1} \\ \beta_{2} \end{array} \right) +
+  \left( \begin{array}{c} \epsilon_{1} \\ \epsilon_{2} \\ \dots \\ \epsilon_{n} \end{array} \right)$$
+
+The column of ones incorporates the intercept term. R makes it easy to visualize this representation.
+
+## Checking independence assumption
+
+To check independence, plot residuals against...
+
+- time variables present (e.g., order of observation)
+- spatial variables 
+- predictors used in the model 
+
+A pattern that is not random suggests lack of independence.
+
+
+## Measures of influence
+
+Calling the `influence.measures` function on a model object produces a table of various influence measures, including DFBETAS, DFFITS, covariance ratios, Cook's distances, and hat matrix values.
+
+Calling `summary` on a saved `influence.measures` object will identify influential cases.
+
+Cases which are influential with respect to any of these measures are marked with an asterisk.
+
+```
+im.out <- influence.measures(model.object)
+summary(im.out)
+```
+
+## The meanings of "measure of influence"
+
+- DFBETAS: measures influence that case _i_ has on each regression coefficient
+- DFFITS: measures influence that case _i_ has on fitted value $\hat{y_{i}}$
+- covariance ratios: measures influence of case _i_ on standard errors of the regression coefficients
+- Cook's distance: measures influence that case _i_ has on all fitted values 
+- hat matrix: measures _leverage_ of case _i_ (i.e. outlying predictor variables)
+
+Each of these have thresholds that when exceeded suggest an influential case. Let R remember those for you.
+
+## Checking for collinearity
+
+_Variance Inflation Factors_ allow us to detect collinearity.
+
+The `vif` function from the `car` package makes this easy.
+
+`vif(model.object)` returns VIF values.
+
+If any greater than 10, that's an indication of collinearity.
+
+
+## Model Selection - BIC
+
+Another criterion-based approach is Schwarz's Bayesian Criterion (BIC).
+
+BIC is defined as $-2$ max loglikelihood $+ log(n)p$. We want to minimize BIC.
+
+BIC places a heavier penalty on models with many predictors.
+
+Use the `regsubsets` function from the `leaps` package to find the model with lowest BIC.
+
+
+## Criterion-based approach - Best Subset Selection
+
+1. Let $\mathcal{M}_{0}$ be the null model with no predictors. That is, it predicts the sample mean for each observation.
+2. For $k = 1,2,...,p$ 
+    + fit a model for all possible combinations of $k$ predictors.
+    + pick best model (ie, one with smallest RSS) and call it $\mathcal{M}_{k}$.
+3. Select a single best model from among $\mathcal{M}_{0},...,\mathcal{M}_{p}$ using a criterion such as BIC.
+
+```
+library(leaps)
+out <- regsubsets(response ~ ., data=yourdata)
+plot(out)
+```
+ 
+## Criterion-based approach - Forward Selection
+
+1. Let $\mathcal{M}_{0}$ be the null model with no predictors. That is, it predicts the sample mean for each observation.
+2. For $k = 0,1,...,p-1$
+    + consider all $p-k$ models that augment the predictors in $\mathcal{M}_{k}$ with one additional predictor.
+    + pick best model (ie, one with smallest RSS) and call it $\mathcal{M}_{k+1}$
+3. Select a single best model from among $\mathcal{M}_{0},...,\mathcal{M}_{p}$ using a criterion such as BIC.
+
+
+```
+library(leaps)
+out <- regsubsets(response ~ ., data=yourdata, 
+                  method="forward")
+plot(out)
+```
+
+## Criterion-based approach - Backward Selection
+
+1. Let $\mathcal{M}_{p}$ be the full model with _all_ predictors.
+2. For $k = p, p-1,...,1$ 
+    + fit all $k$ models that contain all but one of the predictors in $\mathcal{M}_{k}$;
+    + pick best model (ie, one with smallest RSS) and call it $\mathcal{M}_{k-1}$
+3. Select a single best model from among $\mathcal{M}_{0},...,\mathcal{M}_{p}$ using a criterion such as BIC.
+
+
+```
+library(leaps)
+out <- regsubsets(response ~ ., data=yourdata, 
+                  method="backward")
+plot(out)
+```
+
+## Model validation
+
+When using a linear model for prediction, we'd like to know something about the model's accuracy.
+
+We therefore estimate the _test error rate_: the average error that results from using a model to predict responses on _new_ observations.
+
+Basic process: 
+
+1. _Randomly_ split data into two groups, one to create model (_training_ set) and one to test it (_testing_ set)
+2. Build model with training data
+3. Make predictions using testing data
+4. Calculate the test error rate
+
+## Mean Square Error (MSE)
+
+In regression, one way to measure test error is the _mean square error (MSE)_:
+
+$$MSE = \frac{1}{n}\sum_{i=1}^{n}(y_{i} - \hat{y}_{i})^{2}$$
+
+In words: "the mean of the squared residuals"
+
+It's important we calculate this using _test_ data on a model built with _training_ data.
+
+The test error calculated with same data used to build model is too optimistic.
+
+## The validation set approach
+
+An easy way to split data into training and testing sets is to use the `sample` function:
+
+```{r}
+sample(10,5)
+```
+
+Use `sample` to create a vector of random row numbers and then use vector in the `subset=` argument of `lm`. 
+
+Split a data frame called "d" in half and build model:
+```
+train <- sample(nrow(d), round(0.5*nrow(d)))
+m <- lm(resp ~ pred, data=d, subset=train)
+```
+
+## _k_-fold cross validation
+
+Randomly divide data into _k_ groups, or folds, of approximately equal size. 
+
+Each group is used as a test set for a model built with the other groups, resulting in _k_ MSE values.
+
+The mean of the _k_ MSE values is the test error estimate.
+
+We can use the `cv.glm` function in the `boot` package to do this for us.
+
+## Interpreting Logistic Regression coefficients
+
+Logistic regression coefficients give the change in the _log odds_ of the outcome for a one unit increase in the predictor variable.
+
+Exponentiate coefficient to get the _odds ratio_.
+
+Example: say logistic regression coefficient of $X1$ is 1.06. $exp(1.06) = 2.89$, which says that for a one unit increase in X1 the odds of response = 1 is 2.89 times higher than for  response = 0.  
+
+odds = $p / (1-p)$
+
+odds ratio = $\frac{ p_{1} / (1 - p_{1}) }{ p_{2} / (1 - p_{2}) }$
+
