@@ -67,7 +67,7 @@ Most any kind of data can be read into R. The usual form of the function is `rea
 
 - CSV: `read.csv(file="file.csv")`
 - TXT: `read.table(file="file.txt", header=TRUE)`
-- Fixed-width: `read.fwf(file="file.dat", widths = c(1,2,3))`
+- Fixed-width: `read.fwf(file="file.dat", widths = c(4,3,9))`
 
 The `foreign` package allows you to read in data from other programs. `library(foreign)`:
 
@@ -221,7 +221,7 @@ Model formulation is used throughout R in plotting, aggregation and statistical 
 
 ## Model formula symbols
 
-Symbols are used differently in R model formulae:
+Symbols are used differently in R models:
 
 - $+$ inclusion of variable (not addition)
 - $-$ deletion of variable (not subtraction)
@@ -267,7 +267,7 @@ Factors are modeled using _treatment contrasts_.
 
 This means one level is treated as baseline and the other levels have coefficients that express change from baseline.
 
-To make this happen R automatically codes the factor levels as dummy variables in the model matrix $\mathbf{X}$.
+To make this happen R automatically codes the factor levels as dummy variables.
 
 Say we have variable `level` with three levels: low, medium, high. R codes as follows:
 
@@ -435,7 +435,7 @@ Reasons for using a subset of predictors instead of all of them:
 
 ## Two main types of model selection
 
-1. Testing-based approach: compare successive models using hypotheis tests
+1. Testing-based approach: compare successive models using hypothesis tests
 2. Criterion-based approach: optimize a measure of goodness
 
 Which to choose? That's up to you. Whatever you do, expect to do some experimentation and iteration to find better models.
@@ -445,7 +445,7 @@ Also expect to use a great deal of subjective judgment.
 
 ## Testing-based approach
 
-Compare nested models using `anova` function.
+Compare nested models with a _partial F-test_ using the `anova` function.
 
 For example:
 ```

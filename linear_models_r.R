@@ -12,7 +12,6 @@ install.packages("car")
 install.packages("arm")
 install.packages("visreg")
 install.packages("leaps")
-install.packages("ggplot2")
 install.packages("boot")
 
 
@@ -25,10 +24,10 @@ install.packages("boot")
 str(cars)
 summary(cars)
 
-# scatter plot
+# scatterplot
 plot(dist ~ speed, data=cars)
 
-# scatterplot from the car package
+# scatterplot() from the car package
 library(car)
 scatterplot(dist ~ speed, data=cars)
 
@@ -78,13 +77,13 @@ scatterplot(dist ~ speed, data=cars, smooth = FALSE, boxplots = FALSE)
 # gleason.score - Gleason score
 
 # can we model PSA as a linear function of other variables?
-pros <- read.csv("data/prostate.csv")
+# pros <- read.csv("prostate.csv")
+pros <- read.csv("http://people.virginia.edu/~jcf2d/workshops/lmr/prostate.csv")
 summary(pros)
-names(pros)
 str(pros)
 pairs(pros)
 
-# scatterplotMatrix from the car package
+# scatterplotMatrix() from the car package
 scatterplotMatrix(pros)
 scatterplotMatrix(pros[,c(1:4)])
 
@@ -110,6 +109,7 @@ pros$logpsa <- log(pros$psa)
 pros$psa <- NULL
 
 # volume, weight, bph, cap.pen might benefit from log transformation.
+# butr we won't pursue further.
 
 # fit model using all variables
 # the plus (+) sign means "include" in model
@@ -145,7 +145,7 @@ confint(m1,"volume")
 # plot of 1 and 2 SE confidence intervals of coefficients
 library(arm)
 coefplot(m1)
-# include intercept and draw a box around the plot
+# draw a box around the plot
 coefplot(m1, frame.plot=TRUE)
 
 # confidence intervals for predictions
@@ -166,23 +166,23 @@ pros.new
 # predicted mean with interval
 pred.mean <- predict(m1, newdata=pros.new, interval = "confidence")
 pred.mean
-exp(pred.mean)
 # predicted value with interval
 pred.val <- predict(m1, newdata=pros.new, interval = "prediction")
 pred.val
-exp(pred.val)
 
-# In two-dimensions (1 predictor), we can plot these as confidence bands
+
+# In two-dimensions (1 predictor), we can plot the confidence bands
 plot(dist ~ speed, data=cars)
 # visreg package makes this easy:
 library(visreg)
 visreg(cars.lm)
+# change appearance (cex = character expansion; pch=plotting character)
+visreg(cars.lm, points=list(cex=1, pch=1), line=list(col="black"))
 
 
 # model formula and specifications ----------------------------------------
 
 # recall previous model
-m1$call 
 m1
 # this fits the same model:
 # drop psa and fit everything else in the data frame
@@ -193,7 +193,7 @@ m1
 m2 <- lm(logpsa ~ volume + weight + volume:weight, data=pros)
 summary(m2)
 # same thing
-m2 <- lm(logpsa ~ volume*weight, data=pros)
+m2 <- lm(logpsa ~ volume * weight, data=pros)
 summary(m2)
 
 # model with 3 predictors and all 2-way interactions
@@ -222,6 +222,10 @@ pros$svi <- factor(pros$svi)
 summary(pros$gleason.score) 
 summary(pros$svi)
 
+# verify gleason.score is factor
+class(pros$gleason.score)
+is.factor(pros$gleason.score)
+
 # Note: when a variable is all zeros and ones, making it a factor won't change
 # its model coefficient. 
 
@@ -233,15 +237,10 @@ boxplot(logpsa ~ gleason.score, pros)
 aggregate(logpsa ~ svi, pros, mean)
 boxplot(logpsa ~ svi, pros)
 
-# verify gleason.score is factor
-class(pros$gleason.score)
-is.factor(pros$gleason.score)
-
 # linear models with gleason.score (aka, ANOVA)
 fm1 <- lm(logpsa ~ gleason.score, pros)
 summary(fm1)
 anova(fm1)
-
 
 # linear model where gleason.score interacted with svi (factor:factor)
 
@@ -254,7 +253,7 @@ interaction.plot(x.factor = pros$gleason.score,
 
 # means of interacted factors
 aggregate(logpsa ~ gleason.score * svi, data=pros, mean)
-# counts of interacted factors
+# counts of interacted factors; table(row,column)
 table(pros$gleason.score, pros$svi)
 
 # fit linear model with gleason score and svi (aka, 2-factor ANOVA)
@@ -263,26 +262,22 @@ summary(fm3)
 anova(fm3)
 
 # linear model where gleason.score interacted with volume (factor:numeric)
+# (aka, Analysis of Covariance - ANCOVA)
 
 # plot interaction of factor and numeric:
 scatterplot(logpsa ~ volume | gleason.score, data=pros, smooth=F)
+# should we log transform volume?
+scatterplot(logpsa ~ log(volume) | gleason.score, data=pros, smooth=F)
 # conditioning plot
-coplot(logpsa ~ volume | gleason.score, data=pros, rows = 1)
+coplot(logpsa ~ log(volume) | gleason.score, data=pros, rows = 1)
 # conditioning plot with smooth line
-coplot(logpsa ~ volume | gleason.score, data=pros, rows = 1, panel=panel.smooth)
+coplot(logpsa ~ log(volume) | gleason.score, data=pros, rows = 1, panel=panel.smooth)
 
 # now fit the model (difference in slopes for each level of gleason.score?)
-fm4 <- lm(logpsa ~ gleason.score*volume, pros)
+fm4 <- lm(logpsa ~ gleason.score*log(volume), pros)
 summary(fm4)
-# slope not 0, but no significant difference in slopes relationship between
-# logpsa and volume doesn't appear to change for different levels of gleason
-# score.
-
-# confidence interval for volume
-confint(fm4,"volume")
-
-# plot results
-visreg(fm4, xvar = "volume", by = "gleason.score")
+# slope not 0, but the relationship between logpsa and volume doesn't appear to
+# change for different levels of gleason score.
 
 
 # regression diagnostics --------------------------------------------------
@@ -301,9 +296,10 @@ pros[32,]
 # very high weight
 
 # check independence assumption (or try to anyway since we don't have time variables)
-# plot residuals against all variables and look for patterns
-plot(residuals(m1) ~ ., data=pros)
-
+# plot residuals against all predictor variables and look for patterns;
+# don't plot residuals against your response
+# pros[,-8] says to drop column 8 (logpsa) when running plot function
+plot(residuals(m1) ~ . , data=pros[,-8])
 
 
 
@@ -334,14 +330,14 @@ summary(step.out) # final model
 # same as what we selected using anova()
 
 step.out$anova # log of selection
+
+# see AIC without using step function:
 extractAIC(pros.lm)
 extractAIC(update(pros.lm,.~.-weight -age))
 
 # check diagnostics
 par(mfrow=c(2,2))
 plot(pros.lm2)
-# check for influential values
-summary(influence.measures(pros.lm2))
 
 # obs 94 looks interesting...
 # fit model without obs 94
@@ -358,6 +354,26 @@ summary(pros.lm2)
 # practically or just statistically significant?
 # use judgment. 
 
+# wait a minute...
+# let's check diagnostics of original model
+par(mfrow=c(2,2))
+plot(pros.lm)
+
+
+# obs 32 is very influential
+# fit model without obs 32
+pros.lm1 <- update(pros.lm, subset= -32) 
+summary(pros.lm1)
+# now weight is signficant at 0.05 level and bph marginally significant 
+# at 0.10 level
+plot(pros.lm1)
+par(mfrow=c(1,1))
+
+# model selection with obs 32 removed
+step(pros.lm1)
+
+# AIC selects a different model based on 1 observation being removed.
+
 
 
 # Logistic Regression -----------------------------------------------------
@@ -370,12 +386,23 @@ summary(pros.lm2)
 # RACE = race of mother (1 = white, 2 = black, 3 = other)
 # LWT = weight of mother in pounds
 
-lowbirth <- read.csv("data/lowbirth.csv")
+# lowbirth <- read.csv("data/lowbirth.csv")
+lowbirth <- read.csv("http://people.virginia.edu/~jcf2d/workshops/lmr/lowbirth.csv")
 # define RACE and SMOKE as a factor (ie, a categorical variable)
 lowbirth$RACE <- factor(lowbirth$RACE)
 lowbirth$SMOKE <- factor(lowbirth$SMOKE)
 
 # Is low birth weight related to the factors above?
+
+# investigate data
+summary(lowbirth)
+
+# investigate relationships
+with(lowbirth,table(RACE, LOW))
+with(lowbirth,table(SMOKE, LOW))
+with(lowbirth,table(RACE, LOW, SMOKE))
+boxplot(LWT ~ LOW, data=lowbirth)
+boxplot(AGE ~ LOW, data=lowbirth)
 
 # fit logistic regression using glm(); note family=binomial
 lb.glm <- glm(LOW ~ AGE + SMOKE + RACE + LWT, data=lowbirth, family=binomial)
@@ -388,19 +415,41 @@ fitted(lb.glm)
 lb2.glm <- update(lb.glm, . ~ . - AGE)
 summary(lb2.glm)
 
-# compare models
+# compare models - hypothesis test
 anova(lb2.glm, lb.glm, test = "Chisq")
+# can also search for a model with step()
+step(lb.glm)
 
 # Result: smaller model fits just as well as larger model
 
 # Interpretation of coefficients
 coef(lb2.glm) # log odds
 exp(coef(lb2.glm)) # odds ratios
+exp(confint(lb2.glm)) # CI for odds ratios
 
-# visualization
+# visualization of probabilities with visreg
+
+# By default, conditional plots in visreg are constructed by filling in other
+# explanatory variables with the median (for numeric variables) or most common
+# category (for factors)
+# median LWT = 121; most common SMOKE = 0; most common RACE = 1
+par(mfrow=c(2,2))
 visreg(lb2.glm, scale="response")
-visreg(lb2.glm, "LWT", by="RACE", scale="response")
-visreg(lb2.glm, "LWT", by="SMOKE", scale="response")
+par(mfrow=c(1,1))
+
+# change in probabilities over LWT by RACE
+visreg(lb2.glm, "LWT", by="RACE", scale="response",
+       main="SMOKE = 0") # SMOKE = 0
+visreg(lb2.glm, "LWT", by="RACE", cond=list(SMOKE=1), scale="response",
+       main="SMOKE = 1") # SMOKE = 1
+
+# change in probabilities over LWT by SMOKE
+visreg(lb2.glm, "LWT", by="SMOKE", scale="response", 
+       main="RACE = white") # RACE = 1
+visreg(lb2.glm, "LWT", by="SMOKE", cond=list(RACE=2), scale="response",
+       main="RACE = black") # RACE = 2
+visreg(lb2.glm, "LWT", by="SMOKE", cond=list(RACE=3), scale="response",
+       main="RACE = other") # RACE = 3
 
 
 # Bonus material ----------------------------------------------------------
