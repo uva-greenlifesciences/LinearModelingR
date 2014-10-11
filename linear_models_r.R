@@ -1,19 +1,20 @@
 # Linear Modeling in R
 # Clay Ford
 # UVA StatLab
-# Fall 2014
+# October 2014
 
 # Tips:
 # 1. Ctrl + Enter to submit commands
 # 2. Use Tab to complete a command
 
 # packages used in this workshop
+# Only issue these commands if you haven't already installed these packages
 install.packages("car")
-install.packages("arm")
 install.packages("visreg")
-install.packages("leaps")
-install.packages("boot")
 
+# issue these commands to have access to their functions:
+library(car)
+library(visreg)
 
 # simple linear regression ------------------------------------------------
 
@@ -28,7 +29,6 @@ summary(cars)
 plot(dist ~ speed, data=cars)
 
 # scatterplot() from the car package
-library(car)
 scatterplot(dist ~ speed, data=cars)
 
 # distribution of response
@@ -59,7 +59,8 @@ abline(cars.lm)
 # note: abline() only works for simple linear regression
 
 # can also use scatterplot
-scatterplot(dist ~ speed, data=cars, smooth = FALSE, boxplots = FALSE)
+scatterplot(dist ~ speed, data=cars, 
+            smooth = FALSE, boxplots = FALSE)
 
 # multiple linear regression ----------------------------------------------
 
@@ -85,6 +86,7 @@ pairs(pros)
 
 # scatterplotMatrix() from the car package
 scatterplotMatrix(pros)
+# look at just first 4 columns of data
 scatterplotMatrix(pros[,c(1:4)])
 
 # some observations:
@@ -94,7 +96,6 @@ scatterplotMatrix(pros[,c(1:4)])
 summary(pros$weight)
 # bph has a lot of 0's
 summary(pros$bph)
-hist(pros$bph)
 
 # check distribution of PSA, our response
 hist(pros$psa) # skewed right
@@ -108,8 +109,8 @@ pros$logpsa <- log(pros$psa)
 # drop psa from data frame
 pros$psa <- NULL
 
-# volume, weight, bph, cap.pen might benefit from log transformation.
-# butr we won't pursue further.
+# volume, weight, bph, cap.pen might benefit from log transformation,
+# but we won't pursue further.
 
 # fit model using all variables
 # the plus (+) sign means "include" in model
@@ -118,11 +119,12 @@ m1 <- lm(logpsa ~ volume + weight + age + bph + svi +
 summary(m1)
 # Note: the response is log transformed, so interpretation of coefficients
 # changes. To interpret volume coefficient, exponentiate: exp(0.07) = 1.07, so
-# an increase in one unit of volume corresponds to about a 7% increase in PSA.
+# an increase in one unit of volume corresponds to about a 7% increase in PSA,
+# assuming all other predictors are held constant.
 
 # use extractor functions to see model results:
 coef(m1)
-fitted(m1) # on log sacle
+fitted(m1) # on log scale
 exp(fitted(m1)) # transformed back to original scale
 
 # what about standard errors, R-squared? How to extract those?
@@ -141,12 +143,6 @@ m1s$sigma # residual standard error
 confint(m1) # 95%
 confint(m1, level=0.90)
 confint(m1,"volume")
-
-# plot of 1 and 2 SE confidence intervals of coefficients
-library(arm)
-coefplot(m1)
-# draw a box around the plot
-coefplot(m1, frame.plot=TRUE)
 
 # confidence intervals for predictions
 
@@ -173,8 +169,7 @@ pred.val
 
 # In two-dimensions (1 predictor), we can plot the confidence bands
 plot(dist ~ speed, data=cars)
-# visreg package makes this easy:
-library(visreg)
+# visreg() from the visreg package makes this easy:
 visreg(cars.lm)
 # change appearance (cex = character expansion; pch=plotting character)
 visreg(cars.lm, points=list(cex=1, pch=1), line=list(col="black"))
@@ -237,15 +232,26 @@ boxplot(logpsa ~ gleason.score, pros)
 aggregate(logpsa ~ svi, pros, mean)
 boxplot(logpsa ~ svi, pros)
 
+# plot effects of factors
+plot.design(logpsa ~ gleason.score, data = pros)
+
 # linear models with gleason.score (aka, ANOVA)
 fm1 <- lm(logpsa ~ gleason.score, pros)
 summary(fm1)
+coef(fm1)
 anova(fm1)
 
+# one-way ANOVA with gleason.score
+aov1 <- aov(logpsa ~ gleason.score, pros)
+summary(aov1) # same as anova(fm1)
+coef(aov1) # same as coef(lm1)
+
 # linear model where gleason.score interacted with svi (factor:factor)
+# exploratory plots and summaries
+plot.design(logpsa ~ gleason.score * svi, data=pros)
+boxplot(logpsa ~ gleason.score * svi, data=pros)
 
 # plot interaction of factors:
-boxplot(logpsa ~ gleason.score * svi, data=pros)
 interaction.plot(x.factor = pros$gleason.score,
                  trace.factor = pros$svi,
                  response = pros$logpsa)
@@ -266,14 +272,12 @@ anova(fm3)
 
 # plot interaction of factor and numeric:
 scatterplot(logpsa ~ volume | gleason.score, data=pros, smooth=F)
-# should we log transform volume?
-scatterplot(logpsa ~ log(volume) | gleason.score, data=pros, smooth=F)
-# conditioning plot
-coplot(logpsa ~ log(volume) | gleason.score, data=pros, rows = 1)
-# conditioning plot with smooth line
-coplot(logpsa ~ log(volume) | gleason.score, data=pros, rows = 1, panel=panel.smooth)
 
-# now fit the model (difference in slopes for each level of gleason.score?)
+# let's log transform volume:
+scatterplot(logpsa ~ log(volume) | gleason.score, data=pros, smooth=F)
+
+# now fit the model
+# Is there a difference in slopes for each level of gleason.score?
 fm4 <- lm(logpsa ~ gleason.score*log(volume), pros)
 summary(fm4)
 # slope not 0, but the relationship between logpsa and volume doesn't appear to
@@ -291,24 +295,39 @@ par(mfrow=c(2,2))
 plot(m1)
 par(mfrow=c(1,1)) # restore to previous setting
 
-# what's up with observation 32?
+# observation 32 appears to be very influential
 pros[32,]
 # very high weight
 
-# check independence assumption (or try to anyway since we don't have time variables)
-# plot residuals against all predictor variables and look for patterns;
-# don't plot residuals against your response
-# pros[,-8] says to drop column 8 (logpsa) when running plot function
-plot(residuals(m1) ~ . , data=pros[,-8])
-
+# check independence assumption
+# plot residuals against predictor variables and look for patterns;
+# there should be no pattern.
+# don't plot residuals against your response;
+# Example
+plot(residuals(m1) ~ volume , data=pros)
+plot(residuals(m1) ~ weight , data=pros)
 
 
 # Model Selection ---------------------------------------------------------
 
+# let's fit a new model with svi and gleason.score as factors
+m1 <- lm(logpsa ~ ., data=pros) 
+summary(m1)
+plot(m1) # 6 kinds of built-in diagnostic plots
+
+# 32 very influential
+
+# update model without obs 32 using update() function
+m2 <- update(m1, subset = -32)
+summary(m2)
+plot(m2)
+
+summary(m1)
+summary(m2)
+
 # let's fit a new model
 pros.lm <- lm(logpsa ~ weight + volume + svi + bph + age, data=pros) 
 
-# updating models
 # original model with all variables and observations
 summary(pros.lm)
 
@@ -322,43 +341,15 @@ anova(pros.lm2,pros.lm)
 
 # Result: fail to reject null; smaller model fits just as well as larger model
 
-
 # Using AIC to select a model
 step.out <- step(pros.lm)
 step.out
 summary(step.out) # final model
 # same as what we selected using anova()
 
-step.out$anova # log of selection
-
-# see AIC without using step function:
-extractAIC(pros.lm)
-extractAIC(update(pros.lm,.~.-weight -age))
-
-# check diagnostics
-par(mfrow=c(2,2))
-plot(pros.lm2)
-
-# obs 94 looks interesting...
-# fit model without obs 94
-pros.lm2a <- update(pros.lm2, subset= -94) 
-summary(pros.lm2a)
-plot(pros.lm2a)
-par(mfrow=c(1,1))
-
-# Better? Worth it? What do we think? Judgment call.
-
-# returning to updated model with all observations:
-summary(pros.lm2)
-# lots of stars, but examine effect size.
-# practically or just statistically significant?
-# use judgment. 
-
-# wait a minute...
 # let's check diagnostics of original model
 par(mfrow=c(2,2))
 plot(pros.lm)
-
 
 # obs 32 is very influential
 # fit model without obs 32
@@ -373,8 +364,6 @@ par(mfrow=c(1,1))
 step(pros.lm1)
 
 # AIC selects a different model based on 1 observation being removed.
-
-
 
 # Logistic Regression -----------------------------------------------------
 
@@ -453,6 +442,11 @@ visreg(lb2.glm, "LWT", by="SMOKE", cond=list(RACE=3), scale="response",
 
 
 # Bonus material ----------------------------------------------------------
+
+# material I had to edit out for time
+# this material makes use of the following packages:
+install.packages("leaps")
+install.packages("boot")
 
 # simple linear regression using simulated data
 
@@ -572,6 +566,58 @@ summary(glm.all)
 cv.mse <- cv.glm(pros, glm.all, K=5)$delta # the first number is mean MSE
 cv.mse
 sqrt(cv.mse[1])
+
+
+# Using AIC to select a model
+step.out <- step(pros.lm)
+step.out
+summary(step.out) # final model
+# same as what we selected using anova()
+
+step.out$anova # log of selection
+
+# see AIC without using step function:
+extractAIC(pros.lm)
+extractAIC(update(pros.lm,.~.-weight -age))
+
+# check diagnostics
+par(mfrow=c(2,2))
+plot(pros.lm2)
+
+# obs 94 looks interesting...
+# fit model without obs 94
+pros.lm2a <- update(pros.lm2, subset= -94) 
+summary(pros.lm2a)
+plot(pros.lm2a)
+par(mfrow=c(1,1))
+
+# Better? Worth it? What do we think? Judgment call.
+
+# returning to updated model with all observations:
+summary(pros.lm2)
+# lots of stars, but examine effect size.
+# practically or just statistically significant?
+# use judgment. 
+
+# wait a minute...
+# let's check diagnostics of original model
+par(mfrow=c(2,2))
+plot(pros.lm)
+
+
+# obs 32 is very influential
+# fit model without obs 32
+pros.lm1 <- update(pros.lm, subset= -32) 
+summary(pros.lm1)
+# now weight is signficant at 0.05 level and bph marginally significant 
+# at 0.10 level
+plot(pros.lm1)
+par(mfrow=c(1,1))
+
+# model selection with obs 32 removed
+step(pros.lm1)
+
+# AIC selects a different model based on 1 observation being removed.
 
 
 # Model Selection by best subset, forward and backward selection

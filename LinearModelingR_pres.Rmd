@@ -17,19 +17,52 @@ Linear often refers to straight lines, but linear models can be curved.
 
 ## Example of a classic linear model
 
-$$Y_{i} = \beta_{0} +  \beta_{1}X_{i1} + \beta_{2}X_{i2} + \epsilon_{i}$$
+$$Y = \beta_{0} +  \beta_{1}X_{1} + \beta_{2}X_{2} + \epsilon$$
 
-- $Y_{i}$ is the response of the $i^{th}$ observation
+- $Y$ is the response 
+- $X_{1}$ and $X_{2}$ are the predictors
 - $\beta_{0}, \beta_{1}, \beta_{2}$ are coefficients
-- $X_{i1}$ and $X_{i2}$ are predictors of the $i^{th}$ observation
-- $\epsilon_{i}$ is random error of the $i^{th}$ observation; we assume errors are independent and come from a Normal distribution with mean = 0 and variance $\sigma^{2}$; this implies $Y_{i}$ comes from a Normal distribution with mean $\beta_{0} +  \beta_{1}X_{1} + \beta_{2}X_{2}$ and variance $\sigma^{2}$.
+- $\epsilon$ is random error. Our model will not perfectly predict $Y$. It will be off by some random amount. We assume this amount is a random draw from a Normal distribution with mean 0 and standard deviation $\sigma$
 
-_Building a linear model_ means we propose a linear model and then estimate the parameters and the variance of the error term. Above, this means estimating $\beta_{0}, \beta_{1}, \beta_{2}$ and $\sigma^{2}$. This is what we do in R.
+_Building a linear model_ means we propose a linear model and then estimate the coefficients and the variance of the error term. Above, this means estimating $\beta_{0}, \beta_{1}, \beta_{2}$ and $\sigma$. This is what we do in R.
+
+## Proposing a model in 2 dimensions
+
+It appears this data came from a straight line model: $Y = \beta_{0} +  \beta_{1}X + \epsilon$.
+
+```{r, echo=FALSE}
+x <- seq(1,10)
+set.seed(1)
+y <- 3 + 2*x + rnorm(n=10,mean=0,sd=3)
+opar <- par(mai=c(1.093333, 1.093333, 0, 0.560000))
+plot(x,y, xlim=c(0,10), ylim=c(0,25))
+par(opar)
+
+```
 
 
-## Estimating $\mathbf{\beta}$
+## Building a model
 
-The best estimate minimizes the sum of squared errors. 2D example: line with intercept $\hat{\beta_{0}}$ and slope $\hat{\beta_{1}}$ with squared and summed distances of red lines (ie, residuals) as small as possible.
+Statistics allows us to _fit_ a model to the data. Below is the best fitting line for this data.
+
+```{r, echo=FALSE}
+x <- seq(1,10)
+set.seed(1)
+y <- 3 + 2*x + rnorm(n=10,mean=0,sd=3)
+opar <- par(mai=c(1.093333, 1.093333, 0, 0.560000))
+plot(x,y, xlim=c(0,10), ylim=c(0,25))
+slm <- lm(y ~ x)
+abline(slm)
+text(1, 22, bquote(Y == .(round(coef(slm)[1],2)) + .(round(coef(slm)[2],2))*X),
+     cex = 1.4)
+par(opar)
+
+```
+
+
+## All models are wrong, some are useful
+
+Our model doesn't perfectly predict Y. The length of the red lines (the residuals) are used to estimate the error of our model.
 
 ```{r, echo=FALSE}
 x <- seq(1,10)
@@ -44,35 +77,19 @@ par(opar)
 
 ```
 
-
-## Estimating $\sigma^{2}$
-
-Square and sum the red lines (sum of squared errors, aka residual sum of squares, RSS) and divide by $n - p$. ($p =$ number of coefficients) 
-
-```{r, echo=FALSE}
-x <- seq(1,10)
-set.seed(1)
-y <- 3 + 2*x + rnorm(n=10,mean=0,sd=3)
-opar <- par(mai=c(1.093333, 1.093333, 0, 0.560000))
-plot(x,y, xlim=c(0,10), ylim=c(0,25))
-slm <- lm(y ~ x)
-abline(slm)
-segments(x0=x, y0=slm$fitted, x1=x, y1=y, col="red")
-par(opar)
-```
 
 ## Before fitting a linear model: import data
 
-Most any kind of data can be read into R. The usual form of the function is `read.x`.
+Most any kind of data can be read into R. The usual form of the function is `read.x`. Examples:
 
-- CSV: `read.csv(file="file.csv")`
-- TXT: `read.table(file="file.txt", header=TRUE)`
-- Fixed-width: `read.fwf(file="file.dat", widths = c(4,3,9))`
+- **CSV**: `mydata <- read.csv(file="file.csv")`
+- **TXT**: `mydata <- read.table(file="file.txt", header=TRUE)`
+- **Fixed-width**: `mydata <- read.fwf(file="file.dat", widths = c(4,3,9))`
 
 The `foreign` package allows you to read in data from other programs. `library(foreign)`:
 
-- Stata: `read.dta`
-- SPSS: `read.spss`
+- **Stata**: `read.dta`
+- **SPSS**: `read.spss`
 
 You can also use point-and-click in R Studio: "Import Dataset" button.
 
@@ -86,8 +103,8 @@ Look at descriptive statistics before building a model. Helps you...
 
 Two basic functions:
 
-1. `summary(yourdata)`: Statistical summaries of all variables
-2. `str(yourdata)`: Structure of data 
+1. `summary(mydata)`: Statistical summaries of all variables
+2. `str(mydata)`: Structure of data 
 
 
 ## Before fitting a linear model: exploratory plots
@@ -101,8 +118,8 @@ Always try to visually examine your data before building a model. Helps you...
 Three basic plots:
 
 1. `hist(response)`: Histogram of response 
-2. `plot(response ~ predictor, data=yourdata)`: scatterplot/boxplots
-3. `pairs(yourdata)`: All pairwise scatter plots 
+2. `plot(response ~ predictor, data=mydata)`: scatterplot/boxplots
+3. `pairs(mydata)`: All pairwise scatter plots 
 
 The `car` package has two nice exploratory plotting functions: `scatterplot` and `scatterplotMatrix`.
 
@@ -110,20 +127,20 @@ The `car` package has two nice exploratory plotting functions: `scatterplot` and
 
 The basic function is `lm`. The main arguments are `formula` and `data`. 
 
-The "formula" is the linear model expressed in what is called _Wilkinson-Rogers_ notation. 
+The "formula" is the linear model expressed in what is called _Wilkinson-Rogers_ notation. (_More on that later_)
 
-To fit $Y_{i} = \beta_{0} +  \beta_{1}X_{i1} + \beta_{2}X_{i2} + \epsilon_{i}$ do the following:  
-`lm(formula=response ~ var1 + var2, data=yourdata)`
+To fit $Y = \beta_{0} +  \beta_{1}X_{1} + \beta_{2}X_{2} + \epsilon$ do the following:  
+`lm(formula=Y ~ X1 + X2, data=mydata)`
 
 Or more concisely:  
-`lm(response ~ var1 + var2, yourdata)`
+`lm(Y ~ X1 + X2, mydata)`
 
 ## Saving and working with a linear model
 
 Results of a linear model can be saved, like so:  
-`lm1 <- lm(Y ~ X1 + X2, yourdata)`
+`lm1 <- lm(Y ~ X1 + X2, mydata)`
 
-`lm1` is a linear model object that contains various quantities of interest.
+`lm1` is a linear model _object_ that contains various quantities of interest.
 
 Use _extractor_ functions to view the different quantities. Common ones are `summary`, `coef`, `residuals`, and `fitted`.
 
@@ -191,21 +208,31 @@ To extract from model in R, use `confint` function. Output includes lower and up
 
 Default is 95%, but can be modified using the `level` argument.
 
-The `arm` package provides a nice function called `coefplot` to easily plot confidence intervals of coefficients.
-
 ## Confidence intervals for predictions
 
 We can make predictions using our linear model, but there will be uncertainty. We need to calculate that uncertainty.
 
-Two forms of prediction:
+Two forms of confidence intervals (CI) for prediction:
 
-1. predictions of mean response (predicted mean PSA given these predictors)
-2. predictions of observed response (predicted PSA value for _an individual_ with given predictors)
+1. CI of predicted mean (predicted _mean_ PSA given these predictors)
+2. CI of predicted value (predicted PSA _value for an individual_ with given predictors)
 
-To make predictions in R, use `predict` function. Output includes fit and lower/upper bounds.
+The second is wider due to the increased uncertainty of predicting a specific value versus predicting a mean.
 
-- use argument `interval="confidence"` for mean response
-- use argument `interval="prediction"` for observed response
+To make predictions for a fitted model, use the `predict` function. Output includes fit and lower/upper bounds.
+
+## Using the `predict` function in R
+
+The only required argument to `predict` is the fitted model object. 
+
+Use the `interval` argument to specify type of confidence interval:
+
+- `interval="confidence"` for predicted mean
+- `interval="prediction"` for predicted value
+
+Use the `newdata` argument to make predictions using new data (ie, data not used to build model). New data must be a data frame.
+
+The `visreg` package provides a nice function called `visreg` to easily plot regression lines with confidence intervals.
 
 Let's go to R.
 
@@ -307,8 +334,29 @@ Say we have categorical predictor variable `pos` with values "right", "left" and
 
 Specify interactions using the same formula notation:
 
-- `resp ~ level * pos # factor:factor`
 - `resp ~ level * num # factor:numeric`
+- `resp ~ level * pos # factor:factor`
+
+## How `factor:numeric` interactions are reported in output
+
+```{r, echo=FALSE}
+summary(lm(resp ~ level * num, test))$call
+summary(lm(resp ~ level * num, test))$coefficients[,1, drop=F]
+```
+
+## How `factor:numeric` interactions are interpreted
+
+With one factor and one numeric, this is a _varying intercept and slope_ model. The intercept and slope vary based on the level.
+
+Model when level=low
+
+$9.489 + 0.217*num$
+
+Model when level=high (note how the intercept and slope change)
+
+$(9.489 + 13.548) + (0.217 - 0.066)*num$
+
+This is also knows as an Analysis of Covariance (ANCOVA).
 
 ## How `factor:factor` interactions are reported in output
 
@@ -334,28 +382,21 @@ Mean response value when level=high and position=right
 
 $10.0399 + 14.7078 + 0.6645 - 0.3188 = 25.0934$
 
+This is also known as a 2-Factor Analysis of Variance (ANOVA).
 
-## How `factor:numeric` interactions are reported in output
 
-```{r, echo=FALSE}
-summary(lm(resp ~ level * num, test))$call
-summary(lm(resp ~ level * num, test))$coefficients[,1, drop=F]
-```
+## Linear Modeling vs. ANOVA
 
-## How `factor:numeric` interactions are interpreted
+Two sides of the same coin.
 
-With one factor and one numeric, this is a _varying intercept and slope_ model. The intercept and slope vary based on the level.
+Linear Model: Estimate effects of factor levels on response
 
-Model when level=low
+ANOVA: assess whether or not factors affect response
 
-$9.489 + 0.217*num$
+Do ANOVA same way you fit linear model:
 
-Model when level=high (note how the intercept and slope change)
-
-$(9.489 + 13.548) + (0.217 - 0.066)*num$
-
-This is also knows as an Analysis of Covariance (ANCOVA).
-
+`aov1 <- aov(Y ~ X1 + X2, data=mydata)`  
+`summary(aov)`
 
 ## More information on Factors
 
@@ -364,6 +405,9 @@ Character variables are automatically treated as factors on import (unless you s
 How do you know if a variable is coded as factor? Use `class` or `is.factor`. Can also inspect structure of data frame using `str`.
 
 Calling `summary` on factors produces a table of counts.
+
+Can plot effects of factors with `plot.design`.  
+Example: `plot.design(Y ~ factor, data = mydata)`
 
 Let's go to the R script.
 
@@ -418,7 +462,7 @@ This means removing or adding predictors and/or removing observations.
 
 Adding/removing predictors can be accomplished with the `update` function.
 
-Removing observations can be accomplished with the `subset=` argument on the `lm` function
+Removing observations can be accomplished with the `subset=` argument in the `lm` function
 
 
 ## Model selection
@@ -463,7 +507,7 @@ A low p-value says reject null; the larger model has more explanatory power.
 
 One common criteria is the Akaike Information Criterion (AIC).
 
-AIC is defined as $-2$ max loglikelihood $+ 2p$. We want to minimize AIC.
+We want to minimize AIC.
 
 This approach requires _no hypothesis testing_ unlike the testing-based procedure. 
 
@@ -496,7 +540,7 @@ R can easily do this for us.
 
 Logistic regression is a type of _generalized linear model_ (GLM).
 
-We fit GLM models in R using the `glm()` function. It works like the `lm()` function except we specify which GLM to fit using the `family=` argument.
+We fit GLM models in R using the `glm()` function. It works like the `lm()` function except we specify which GLM to fit using the `family` argument.
 
 Logistic regression requires `family=binomial`.
 
