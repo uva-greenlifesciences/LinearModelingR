@@ -58,9 +58,6 @@ plot(dist ~ speed, data=cars)
 abline(cars.lm)
 # note: abline() only works for simple linear regression
 
-# can also use scatterplot
-scatterplot(dist ~ speed, data=cars, 
-            smooth = FALSE, boxplots = FALSE)
 
 # multiple linear regression ----------------------------------------------
 
@@ -160,11 +157,10 @@ pros.new
 
 # predict logpsa using "new" data:
 # predicted mean with interval
-pred.mean <- predict(m1, newdata=pros.new, interval = "confidence")
-pred.mean
+predict(m1, newdata=pros.new, interval = "confidence")
+
 # predicted value with interval
-pred.val <- predict(m1, newdata=pros.new, interval = "prediction")
-pred.val
+predict(m1, newdata=pros.new, interval = "prediction")
 
 
 # In two-dimensions (1 predictor), we can plot the confidence bands
@@ -191,17 +187,10 @@ summary(m2)
 m2 <- lm(logpsa ~ volume * weight, data=pros)
 summary(m2)
 
-# model with 3 predictors and all 2-way interactions
-m3 <- lm(logpsa ~ (volume + weight + age)^2, data=pros)
-summary(m3)
-
 # polynomial regression: need to use use I()
 m4 <- lm(logpsa ~ volume + I(volume^2), data=pros)
 summary(m4)
-
-# plot polynomial regression
 visreg(m4)
-
 
 # factors and contrasts ---------------------------------------------------
 
@@ -233,7 +222,7 @@ aggregate(logpsa ~ svi, pros, mean)
 boxplot(logpsa ~ svi, pros)
 
 # plot effects of factors
-plot.design(logpsa ~ gleason.score, data = pros)
+plot.design(logpsa ~ gleason.score + svi, data = pros)
 
 # linear models with gleason.score (aka, ANOVA)
 fm1 <- lm(logpsa ~ gleason.score, pros)
@@ -245,10 +234,11 @@ anova(fm1)
 aov1 <- aov(logpsa ~ gleason.score, pros)
 summary(aov1) # same as anova(fm1)
 coef(aov1) # same as coef(lm1)
+TukeyHSD(aov1) # multiple comparisons of means
+plot(TukeyHSD(aov1))
 
 # linear model where gleason.score interacted with svi (factor:factor)
 # exploratory plots and summaries
-plot.design(logpsa ~ gleason.score * svi, data=pros)
 boxplot(logpsa ~ gleason.score * svi, data=pros)
 
 # plot interaction of factors:
@@ -313,7 +303,7 @@ plot(residuals(m1) ~ weight , data=pros)
 # let's fit a new model with svi and gleason.score as factors
 m1 <- lm(logpsa ~ ., data=pros) 
 summary(m1)
-plot(m1) # 6 kinds of built-in diagnostic plots
+plot(m1) 
 
 # 32 very influential
 
@@ -327,9 +317,8 @@ summary(m2)
 
 # let's fit a new model
 pros.lm <- lm(logpsa ~ weight + volume + svi + bph + age, data=pros) 
-
-# original model with all variables and observations
 summary(pros.lm)
+# weight and age don't seem to add anything
 
 # create new model without weight and age
 pros.lm2 <- update(pros.lm, . ~ . - weight - age)

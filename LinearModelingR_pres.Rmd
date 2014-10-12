@@ -389,14 +389,15 @@ This is also known as a 2-Factor Analysis of Variance (ANOVA).
 
 Two sides of the same coin.
 
-Linear Model: Estimate effects of factor levels on response
+Linear Model: Do levels of a categorical variable affect the response?
 
-ANOVA: assess whether or not factors affect response
+ANOVA: Does the mean response differ between levels of a categorical variable?
 
 Do ANOVA same way you fit linear model:
 
 `aov1 <- aov(Y ~ X1 + X2, data=mydata)`  
 `summary(aov)`
+`TukeyHSD(aov1) # multilple comparisons of means`
 
 ## More information on Factors
 
