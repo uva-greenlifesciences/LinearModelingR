@@ -1,7 +1,7 @@
 # Linear Modeling in R
 # Clay Ford
 # UVA StatLab
-# October 2014
+# Fall 2016
 
 # Tips:
 # 1. Ctrl + Enter to submit commands
@@ -20,7 +20,7 @@ library(visreg)
 
 # let's use a data set that comes with R: cars
 # Speed and Stopping Distances of Cars
-
+cars
 # investigate data
 str(cars)
 summary(cars)
@@ -36,10 +36,17 @@ hist(cars$dist)
 
 # regress distance on speed using lm() function
 cars.lm <- lm(dist ~ speed, data=cars)
+
+# view summary of regression results
 summary(cars.lm)
 
 # Interpretation: every 1 mph increase in speed leads to about 4 additional feet
 # in stopping distance. What about the intercept?
+
+# save summary
+sm1 <- summary(cars.lm)
+names(sm1)
+sm1$sigma
 
 # Extractor functions:
 # model coefficients (ie, the betas)
@@ -65,7 +72,7 @@ abline(cars.lm)
 # A study on 97 men with prostate cancer who were due to receive a 
 # radical prostatectomy.
 
-# psa - prostate specific antigen
+# psa - prostate specific antigen (PSA)
 # volume - cancer volume
 # weight - prostate weight
 # age - age of patient
@@ -77,8 +84,8 @@ abline(cars.lm)
 # can we model PSA as a linear function of other variables?
 # pros <- read.csv("prostate.csv")
 pros <- read.csv("http://people.virginia.edu/~jcf2d/workshops/lmr/prostate.csv")
-summary(pros)
 str(pros)
+summary(pros)
 pairs(pros)
 
 # scatterplotMatrix() from the car package
@@ -90,21 +97,16 @@ scatterplotMatrix(pros[,c(1:4)])
 # svi appears to be a factor with levels of 0 and 1
 # gleason score is discrete
 # weight has an outlier (data entry error?)
-summary(pros$weight)
 # bph has a lot of 0's
-summary(pros$bph)
 
 # check distribution of PSA, our response
 hist(pros$psa) # skewed right
-# recall assumption that response is Normally distributed;
-# a log transformation may fix this:
+hist(pros$psa, breaks = 20) 
+# a log transformation may be appropriate:
 hist(log(pros$psa))
 
 # add log transformed psa to data frame:
 pros$logpsa <- log(pros$psa)
-
-# drop psa from data frame
-pros$psa <- NULL
 
 # volume, weight, bph, cap.pen might benefit from log transformation,
 # but we won't pursue further.
@@ -132,6 +134,8 @@ m1s$coefficients
 m1s$r.squared
 m1s$sigma # residual standard error
 
+
+# back to presentation
 
 # confidence intervals ----------------------------------------------------
 
@@ -168,8 +172,20 @@ plot(dist ~ speed, data=cars)
 # visreg() from the visreg package makes this easy:
 visreg(cars.lm)
 # change appearance (cex = character expansion; pch=plotting character)
-visreg(cars.lm, points=list(cex=1, pch=1), line=list(col="black"))
+visreg(cars.lm, 
+       points=list(cex=1, pch=1), 
+       line=list(col="black"))
 
+# what happens if we try this?
+visreg(m1)
+
+# Answer: shows the value of the variable on the x-axis and the change in
+# response on the y-axis, holding all other variables constant (by default,
+# median for numeric variables and most common category for factors).
+
+# see upcoming workshop, Visualizing Model Effects, for more on this topic.
+
+# back to presentation.
 
 # model formula and specifications ----------------------------------------
 
@@ -177,6 +193,7 @@ visreg(cars.lm, points=list(cex=1, pch=1), line=list(col="black"))
 m1
 # this fits the same model:
 # drop psa and fit everything else in the data frame
+pros$psa <- NULL
 m1 <- lm(logpsa ~ ., data=pros)
 m1
 
@@ -192,6 +209,8 @@ m4 <- lm(logpsa ~ volume + I(volume^2), data=pros)
 summary(m4)
 visreg(m4)
 
+# back to presentation.
+
 # factors and contrasts ---------------------------------------------------
 
 # Gleason score and svi could be treated as factors instead of numbers
@@ -199,6 +218,7 @@ pros$gleason.score
 summary(pros$gleason.score)
 pros$svi
 summary(pros$svi)
+
 # let's change gleason.score and svi to factors (categorical variables)
 pros$gleason.score <- factor(pros$gleason.score)
 pros$svi <- factor(pros$svi)
@@ -216,7 +236,7 @@ is.factor(pros$gleason.score)
 # summary stats
 # mean psa for each gleason.score group and boxplots
 aggregate(logpsa ~ gleason.score, pros, mean)
-boxplot(logpsa ~ gleason.score, pros)
+plot(logpsa ~ gleason.score, pros)
 # mean psa for each svi group and boxplots
 aggregate(logpsa ~ svi, pros, mean)
 boxplot(logpsa ~ svi, pros)
@@ -255,16 +275,24 @@ table(pros$gleason.score, pros$svi)
 # fit linear model with gleason score and svi (aka, 2-factor ANOVA)
 fm3 <- lm(logpsa ~ gleason.score * svi, pros)
 summary(fm3)
-anova(fm3)
+
+# Are the predictors "significant"? Do they explain variance in logpsa?
+# Type I tests: test predictors in order
+anova(fm3) 
+
+# Type II tests: test predictors after all others (except interactions)
+Anova(fm3) # CAR function
 
 # linear model where gleason.score interacted with volume (factor:numeric)
 # (aka, Analysis of Covariance - ANCOVA)
 
 # plot interaction of factor and numeric:
-scatterplot(logpsa ~ volume | gleason.score, data=pros, smooth=F)
+scatterplot(logpsa ~ volume | gleason.score, 
+            data=pros, smooth=F)
 
 # let's log transform volume:
-scatterplot(logpsa ~ log(volume) | gleason.score, data=pros, smooth=F)
+scatterplot(logpsa ~ log(volume) | 
+              gleason.score, data=pros, smooth=F)
 
 # now fit the model
 # Is there a difference in slopes for each level of gleason.score?
@@ -273,6 +301,7 @@ summary(fm4)
 # slope not 0, but the relationship between logpsa and volume doesn't appear to
 # change for different levels of gleason score.
 
+# back to presentation
 
 # regression diagnostics --------------------------------------------------
 
@@ -313,12 +342,12 @@ summary(m2)
 plot(m2)
 
 summary(m1)
-summary(m2)
+summary(m2) # weight now appears marginally significant
 
-# let's fit a new model
+# let's fit a new model (leaving in obs 32)
 pros.lm <- lm(logpsa ~ weight + volume + svi + bph + age, data=pros) 
 summary(pros.lm)
-# weight and age don't seem to add anything
+# let's say we want to drop weight and age 
 
 # create new model without weight and age
 pros.lm2 <- update(pros.lm, . ~ . - weight - age)
@@ -354,6 +383,8 @@ step(pros.lm1)
 
 # AIC selects a different model based on 1 observation being removed.
 
+# back to presentation
+
 # Logistic Regression -----------------------------------------------------
 
 # low birth weight data (from Applied Logistic Regression, 2nd ed.)
@@ -383,11 +414,9 @@ boxplot(LWT ~ LOW, data=lowbirth)
 boxplot(AGE ~ LOW, data=lowbirth)
 
 # fit logistic regression using glm(); note family=binomial
-lb.glm <- glm(LOW ~ AGE + SMOKE + RACE + LWT, data=lowbirth, family=binomial)
+lb.glm <- glm(LOW ~ AGE + SMOKE + RACE + LWT, data=lowbirth, 
+              family=binomial)
 summary(lb.glm)
-
-# predicted probabilities
-fitted(lb.glm) 
 
 # fit logistic model without AGE
 lb2.glm <- update(lb.glm, . ~ . - AGE)
@@ -407,9 +436,10 @@ exp(confint(lb2.glm)) # CI for odds ratios
 
 # visualization of probabilities with visreg
 
-# By default, conditional plots in visreg are constructed by filling in other
-# explanatory variables with the median (for numeric variables) or most common
+# By default, conditional plots in visreg are constructed by filling in other 
+# explanatory variables with the median (for numeric variables) or most common 
 # category (for factors)
+
 # median LWT = 121; most common SMOKE = 0; most common RACE = 1
 par(mfrow=c(2,2))
 visreg(lb2.glm, scale="response")
@@ -429,248 +459,6 @@ visreg(lb2.glm, "LWT", by="SMOKE", cond=list(RACE=2), scale="response",
 visreg(lb2.glm, "LWT", by="SMOKE", cond=list(RACE=3), scale="response",
        main="RACE = other") # RACE = 3
 
-
-# Bonus material ----------------------------------------------------------
-
-# material I had to edit out for time
-# this material makes use of the following packages:
-install.packages("leaps")
-install.packages("boot")
-
-# simple linear regression using simulated data
-
-# generate some data
-x <- seq(1,10,length.out = 100)
-set.seed(1) # so we all get same random numbers
-# y = 3 + 2*x + error
-y <- 3 + 2*x + rnorm(n=100,mean=0,sd=2)
-plot(x,y, xlab="predictor", ylab="response")
-
-# We know the process that gave rise to this data:
-# y = 3 + 2*x + error
-# beta_0 = 3 (intercept)
-# beta_1 = 2 (slope)
-# error = value from Normal dist'n with mean 0 and SD 2.
-
-# But in real life we don't know this information,
-# so we work backwards to figure it out:
-
-# fit the model and save to "slr"
-# Note: intercept assumed
-slr <- lm(y ~ x) 
-slr
-# view model summary
-summary(slr)
-# plot fitted line (can only do for simple linear regression)
-abline(slr,col="red")
-# plot original line with intercept 3 and slope 2
-abline(a = 3,b = 2,col="blue")
-
-# A Note about missing data:
-# Missing data means the case is dropped from the analysis.
-# set 5th value of x to NA ("Not Available")
-x[5] <- NA
-summary(lm(y ~ x))
-# note the message: "1 observation deleted due to missingness"
-
-# performing matrix calculations in R
-
-# Recall the matrix notation: Y = XB + e
-# we can extract those matrices and vectors in R:
-model.matrix(m1)
-X <- model.matrix(m1)
-coef(m1)
-B <- coef(m1)
-residuals(m1)
-e <- residuals(m1)
-
-# confirm the linear model formula:
-# Note: %*% means matrix multiplication
-X %*% B + e
-Y <- X%*%B + e
-# compare to original values
-cbind(pros$logpsa,Y)
-
-# influential values
-
-# check for influential values
-im.out <- influence.measures(m1)
-im.out
-summary(im.out)
-# observation 32 looks particularly influential in log transformed model
-
-# re-run model without obs 32
-m1b <- update(m1, subset = -32)
-summary(m1b)
-plot(m1b)
-
-# check for collinearity
-# use vif() from the car package
-vif(m1)
-
-
-# model validation
-
-# fit a model
-lm.all <- lm(logpsa ~ volume + bph + svi + gleason.score, data=pros)
-summary(lm.all)
-
-# calculate MSE:
-mean(residuals(lm.all)^2) # training error estimate; too optimistic
-sqrt(mean(residuals(lm.all)^2)) # return to original units
-
-
-# divide data into two sets: training and test
-# build model with training;
-# predict response with test data;
-# do 1000 times
-
-mse <- numeric(1000)
-for(i in 1:1000){
-  # randomly sample row numbers
-  train <- sample(nrow(pros), round(0.5*nrow(pros)))
-  # build model using only "train" data
-  lm.train <- lm(logpsa ~ volume + bph + svi + gleason.score, data=pros, 
-                 subset=train)
-  # test error estimate
-  mse[i] <- mean((pros$logpsa - predict(lm.train, pros))[-train]^2)
-}
-mean(mse)
-sqrt(mean(mse))
-hist(mse)
-summary(mse)
-IQR(mse)
-quantile(mse,probs = c(0.025,0.975))
-
-sqrt(mean(mse))
-
-# cross validation
-
-# fit model using glm() and then use cv.glm() function in boot package
-
-library(boot) # for cv.glm()
-glm.all <-  glm(logpsa ~ volume + bph + svi + gleason.score, data=pros)
-summary(glm.all)
-# do 5-fold cross validation
-cv.mse <- cv.glm(pros, glm.all, K=5)$delta # the first number is mean MSE
-cv.mse
-sqrt(cv.mse[1])
-
-
-# Using AIC to select a model
-step.out <- step(pros.lm)
-step.out
-summary(step.out) # final model
-# same as what we selected using anova()
-
-step.out$anova # log of selection
-
-# see AIC without using step function:
-extractAIC(pros.lm)
-extractAIC(update(pros.lm,.~.-weight -age))
-
-# check diagnostics
-par(mfrow=c(2,2))
-plot(pros.lm2)
-
-# obs 94 looks interesting...
-# fit model without obs 94
-pros.lm2a <- update(pros.lm2, subset= -94) 
-summary(pros.lm2a)
-plot(pros.lm2a)
-par(mfrow=c(1,1))
-
-# Better? Worth it? What do we think? Judgment call.
-
-# returning to updated model with all observations:
-summary(pros.lm2)
-# lots of stars, but examine effect size.
-# practically or just statistically significant?
-# use judgment. 
-
-# wait a minute...
-# let's check diagnostics of original model
-par(mfrow=c(2,2))
-plot(pros.lm)
-
-
-# obs 32 is very influential
-# fit model without obs 32
-pros.lm1 <- update(pros.lm, subset= -32) 
-summary(pros.lm1)
-# now weight is signficant at 0.05 level and bph marginally significant 
-# at 0.10 level
-plot(pros.lm1)
-par(mfrow=c(1,1))
-
-# model selection with obs 32 removed
-step(pros.lm1)
-
-# AIC selects a different model based on 1 observation being removed.
-
-
-# Model Selection by best subset, forward and backward selection
-library(leaps)
-# best subset
-regfit.sub <- regsubsets(logpsa ~ ., data=pros)
-summary(regfit.sub)
-# bottom line indicates selected variables
-plot(regfit.sub, main="best subset") 
-# top line indicates selected variables
-
-# forward selection
-regfit.fwd <- regsubsets(logpsa ~ ., data=pros, method="forward")
-summary(regfit.fwd)
-plot(regfit.fwd, main="forward selection")
-
-# backward selection
-regfit.bwd <- regsubsets(logpsa ~ ., data=pros, method="backward")
-summary(regfit.bwd)
-plot(regfit.bwd, main="backward selection")
-
-# all select the same "best" model.
-
-# extract coefficients for best model:
-# first identify model with lowest BIC
-which.min(summary(regfit.sub)$bic)
-which.min(summary(regfit.fwd)$bic)
-which.min(summary(regfit.bwd)$bic)
-# now use the model ID to extract coefficients of best model
-coef(regfit.sub, id=4)
-coef(regfit.fwd, id=4)
-coef(regfit.bwd, id=4)
-
-
-# one way to check fit:
-# a good fit will lie close to line with slope 1 and intercept 0
-plot(pros$logpsa, fitted(pros.lm2),
-     xlim=c(0,5),ylim=c(0,5),
-     xlab="Observed",ylab="Fitted")
-abline(a=0,b=1,lty=2)
-# biased predictions for values < 2 and > 4
-
-
-
-# demonstrate odds ratio in logistic regression
-# LWT odds ratio = 0.98
-exp(coef(lb2.glm)[5]) 
-
-# calculate odds ratio by hand
-# predicted probs at LWT=130 and 131
-p1 <- predict(lb2.glm, newdata = data.frame(SMOKE=factor(1), RACE=factor(1), LWT=130), 
-              type = "response")
-p2 <- predict(lb2.glm, newdata = data.frame(SMOKE=factor(1), RACE=factor(1), LWT=131), 
-              type = "response")
-# calculate odds
-odds1 <- (p1/(1-p1))
-odds2 <- (p2/(1-p2))
-
-# odds ratio
-odds2/odds1
-exp(coef(lb2.glm)[5])
-
-# odds decreases by about 1.3% for each 1 pound increase in LWT
-(odds2-odds1)/odds1
 
 
 # END

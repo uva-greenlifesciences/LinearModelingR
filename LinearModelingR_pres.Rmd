@@ -1,19 +1,19 @@
 ---
 title: "Linear Modeling in R"
 author: "Clay Ford"
-date: "October 2014"
+date: "Fall 2016"
 output: beamer_presentation
 ---
 
 ## What are Linear Models?
 
-Linear Models are mathematical representations of the process that (_we think_) gave rise to our data.
+- Linear Models are mathematical representations of the process that (_we think_) gave rise to our data.
 
-The model seeks to explain the relationship between a variable of interest, our _response_ or _dependent_ variable, and one or more _predictor_ or _independent_ variables.
+- The model seeks to explain the relationship between a variable of interest, our _response_ or _dependent_ variable, and one or more _predictor_ or _independent_ variables.
 
-Linear models feature _linear parameters_. That means no parameter appears as an exponent or is multiplied or divided by another parameter. Parameters are _additive_.
+- Linear models feature _linear parameters_. That means no parameter appears as an exponent or is multiplied or divided by another parameter. Parameters are _additive_.
 
-Linear often refers to straight lines, but linear models can be curved.
+- Linear often refers to straight lines, but linear models can be curved.
 
 ## Example of a classic linear model
 
@@ -24,7 +24,7 @@ $$Y = \beta_{0} +  \beta_{1}X_{1} + \beta_{2}X_{2} + \epsilon$$
 - $\beta_{0}, \beta_{1}, \beta_{2}$ are coefficients
 - $\epsilon$ is random error. Our model will not perfectly predict $Y$. It will be off by some random amount. We assume this amount is a random draw from a Normal distribution with mean 0 and standard deviation $\sigma$
 
-_Building a linear model_ means we propose a linear model and then estimate the coefficients and the variance of the error term. Above, this means estimating $\beta_{0}, \beta_{1}, \beta_{2}$ and $\sigma$. This is what we do in R.
+_Building a linear model_ means we propose a linear model and then estimate the coefficients and the standard deviation of the error term. Above, this means estimating $\beta_{0}, \beta_{1}, \beta_{2}$ and $\sigma$. This is what we do in R.
 
 ## Proposing a model in 2 dimensions
 
@@ -53,7 +53,7 @@ opar <- par(mai=c(1.093333, 1.093333, 0, 0.560000))
 plot(x,y, xlim=c(0,10), ylim=c(0,25))
 slm <- lm(y ~ x)
 abline(slm)
-text(1, 22, bquote(Y == .(round(coef(slm)[1],2)) + .(round(coef(slm)[2],2))*X),
+text(1, 22, bquote(Y == .(round(coef(slm)[1],1)) + .(round(coef(slm)[2],1))*X),
      cex = 1.4)
 par(opar)
 
@@ -73,6 +73,8 @@ plot(x,y, xlim=c(0,10), ylim=c(0,25))
 slm <- lm(y ~ x)
 abline(slm)
 segments(x0=x, y0=slm$fitted, x1=x, y1=y, col="red")
+text(1, 22, bquote(sigma == .(round(summary(slm)$sigma,1))) ,
+     cex = 1.4)
 par(opar)
 
 ```
@@ -86,12 +88,10 @@ Most any kind of data can be read into R. The usual form of the function is `rea
 - **TXT**: `mydata <- read.table(file="file.txt", header=TRUE)`
 - **Fixed-width**: `mydata <- read.fwf(file="file.dat", widths = c(4,3,9))`
 
-The `foreign` package allows you to read in data from other programs. `library(foreign)`:
+You can also use point-and-click in R Studio: "Import Dataset" button.   
+\ 
 
-- **Stata**: `read.dta`
-- **SPSS**: `read.spss`
-
-You can also use point-and-click in R Studio: "Import Dataset" button.
+The `haven` package allows you to read in data from other programs, such as SPSS, Stata and SAS.
 
 ## Before fitting a linear model: descriptive stats
 
@@ -109,7 +109,7 @@ Two basic functions:
 
 ## Before fitting a linear model: exploratory plots
 
-Always try to visually examine your data before building a model. Helps you...
+Good idea to visually examine your data before building a model. Helps you...
 
 - identify potential models
 - spot potential outliers or errors
@@ -125,26 +125,26 @@ The `car` package has two nice exploratory plotting functions: `scatterplot` and
 
 ## Fitting a linear model in R
 
-The basic function is `lm`. The main arguments are `formula` and `data`. 
+- The basic function is `lm`. The main arguments are `formula` and `data`. 
 
-The "formula" is the linear model expressed in what is called _Wilkinson-Rogers_ notation. (_More on that later_)
+- The "formula" is the linear model expressed in what is called _Wilkinson-Rogers_ notation. (_More on that later_)
 
-To fit $Y = \beta_{0} +  \beta_{1}X_{1} + \beta_{2}X_{2} + \epsilon$ do the following:  
+- To fit $Y = \beta_{0} +  \beta_{1}X_{1} + \beta_{2}X_{2} + \epsilon$ do the following:  
 `lm(formula=Y ~ X1 + X2, data=mydata)`
 
-Or more concisely:  
+- Or more concisely:  
 `lm(Y ~ X1 + X2, mydata)`
 
 ## Saving and working with a linear model
 
-Results of a linear model can be saved, like so:  
-`lm1 <- lm(Y ~ X1 + X2, mydata)`
+- Results of a linear model can be saved, like so:  
+`lm1 <- lm(Y ~ X1 + X2, mydata)`    
 
-`lm1` is a linear model _object_ that contains various quantities of interest.
+- `lm1` is a linear model _object_ that contains various quantities of interest.
 
-Use _extractor_ functions to view the different quantities. Common ones are `summary`, `coef`, `residuals`, and `fitted`.
+- Use _extractor_ functions to view the different quantities. Common ones are `summary`, `coef`, `residuals`, and `fitted`.    
 
-For example, `summary(lm1)`.
+- For example, `summary(lm1)`.
 
 Let's go to the R script.
 
@@ -200,51 +200,50 @@ F-statistic: 18.24 on 7 and 89 DF,  p-value: 7.694e-15
 
 ## Confidence intervals for $\hat{\beta}$
 
-Confidence intervals allow us to express uncertainty in our estimates.
+- Confidence intervals allow us to express uncertainty in our estimates.
 
-They tell us about plausible values for parameters that hypothesis tests cannot.
+- They tell us about plausible values for parameters that hypothesis tests cannot.
 
-To extract from model in R, use `confint` function. Output includes lower and upper bounds.
+- To extract from model in R, use `confint` function. Output includes lower and upper bounds.
 
-Default is 95%, but can be modified using the `level` argument.
+- Default is 95%, but can be modified using the `level` argument.
 
 ## Confidence intervals for predictions
 
-We can make predictions using our linear model, but there will be uncertainty. We need to calculate that uncertainty.
+- We can make predictions using our linear model, but there will be uncertainty. We need to calculate that uncertainty.
 
-Two forms of confidence intervals (CI) for prediction:
+- Two forms of confidence intervals (CI) for prediction:
 
-1. CI of predicted mean (predicted _mean_ PSA given these predictors)
-2. CI of predicted value (predicted PSA _value for an individual_ with given predictors)
+1. CI of predicted mean (predicted _mean_ given these predictors)
+2. CI of predicted value (predicted _value for an individual_ with given predictors)
 
-The second is wider due to the increased uncertainty of predicting a specific value versus predicting a mean.
+- The second is wider due to the increased uncertainty of predicting a specific value versus predicting a mean.
 
-To make predictions for a fitted model, use the `predict` function. Output includes fit and lower/upper bounds.
+- To make predictions for a fitted model, use the `predict` function. Output includes fit and lower/upper bounds.
 
 ## Using the `predict` function in R
 
-The only required argument to `predict` is the fitted model object. 
+- The only required argument to `predict` is the fitted model object. 
 
-Use the `interval` argument to specify type of confidence interval:
+- Use the `interval` argument to specify type of confidence interval:   
+`interval="confidence"` for predicted mean   
+`interval="prediction"` for predicted value   
 
-- `interval="confidence"` for predicted mean
-- `interval="prediction"` for predicted value
+- Use the `newdata` argument to make predictions using new data (ie, data not used to build model). New data must be a data frame.
 
-Use the `newdata` argument to make predictions using new data (ie, data not used to build model). New data must be a data frame.
-
-The `visreg` package provides a nice function called `visreg` to easily plot regression lines with confidence intervals.
+- The `visreg` package provides a nice function called `visreg` to easily plot regression lines with confidence intervals.
 
 Let's go to R.
 
 ## Model specification in R
 
-We mentioned earlier R uses the _Wilkinson-Rogers_ notation for specifying models:
+- We mentioned earlier R uses the _Wilkinson-Rogers_ notation for specifying models:
 
 > response variable ~ explanatory variable(s)
 
-The tilde (~) can be read as "is modelled as a function of" or "described by" or "regressed on".
+- The tilde (~) can be read as "is modelled as a function of" or "described by" or "regressed on".
 
-Model formulation is used throughout R in plotting, aggregation and statistical tests. 
+- Model formulation is used throughout R in plotting, aggregation and statistical tests. 
 
 ## Model formula symbols
 
@@ -277,26 +276,25 @@ Let's go to R.
 
 ## Using categorical predictors in model building
 
-So far we have only considered numerical predictors. What about categorical predictors such as Male/Female, Democrat/Republican/Independent, Low/Medium/High, etc.?
+* So far we have only considered numerical predictors. What about categorical predictors such as Male/Female, Democrat/Republican/Independent, Low/Medium/High, etc.?
 
-R treats categorical predictors as _factors_.
+* R treats categorical predictors as _factors_.
 
-Either define a variable as a factor in a data frame or in the `lm` formula:
+* Either define a variable as a factor in a data frame or in the `lm` formula:   
+    + `prostate$gleason.score <- factor(prostate$gleason.score)`    
+    + `lm(psa ~ factor(gleason.score), data=prostate)`    
 
-- `prostate$gleason.score <- factor(prostate$gleason.score)`
-- `lm(psa ~ factor(gleason.score), data=prostate)`
-
-Recommended to define variable as factor in the data frame.
+* Recommended to define variable as factor in the data frame.
 
 ## How factors are modeled
 
-Factors are modeled using _treatment contrasts_.
+- Factors are modeled using _treatment contrasts_.
 
-This means one level is treated as baseline and the other levels have coefficients that express change from baseline.
+- This means one level is treated as baseline and the other levels have coefficients that express change from baseline.
 
-To make this happen R automatically codes the factor levels as dummy variables.
+- To make this happen R automatically codes the factor levels as dummy variables.
 
-Say we have variable `level` with three levels: low, medium, high. R codes as follows:
+- Say we have variable `level` with three levels: low, medium, high. R codes as follows:
 
 ```{r, echo=FALSE}
 level <- factor(rep(c(1,2,3)),labels = c("low","medium","high"))
@@ -326,16 +324,16 @@ summary(lm(resp ~ level, test))$coefficients[,1, drop=F]
 
 ## How factors work in interactions
 
-Interacting factors with other factors yields parameter estimates for all combinations of levels.
+* Interacting factors with other factors yields parameter estimates for all combinations of levels.
 
-Interacting factors with numeric variables yields a separate parameter estimate for the numeric variable at each level of the factor.
+* Interacting factors with numeric variables yields a separate parameter estimate for the numeric variable at each level of the factor.
 
-Say we have categorical predictor variable `pos` with values "right", "left" and "center". Further say we have a numeric predictor called `num`.
+* Say we have categorical predictor variable `pos` with values "right", "left" and "center". Further say we have a numeric predictor called `num`.
 
-Specify interactions using the same formula notation:
+* Specify interactions using the same formula notation:
 
-- `resp ~ level * num # factor:numeric`
-- `resp ~ level * pos # factor:factor`
+     + `resp ~ level * num # factor:numeric`
+     + `resp ~ level * pos # factor:factor`
 
 ## How `factor:numeric` interactions are reported in output
 
@@ -346,17 +344,17 @@ summary(lm(resp ~ level * num, test))$coefficients[,1, drop=F]
 
 ## How `factor:numeric` interactions are interpreted
 
-With one factor and one numeric, this is a _varying intercept and slope_ model. The intercept and slope vary based on the level.
+* With one factor and one numeric, this is a _varying intercept and slope_ model. The intercept and slope vary based on the level.
 
-Model when level=low
+* Model when level=low
 
-$9.489 + 0.217*num$
+     + $9.489 + 0.217*num$
 
-Model when level=high (note how the intercept and slope change)
+* Model when level=high (note how the intercept and slope change)
 
-$(9.489 + 13.548) + (0.217 - 0.066)*num$
+     + $(9.489 + 13.548) + (0.217 - 0.066)*num$
 
-This is also knows as an Analysis of Covariance (ANCOVA).
+* This is also knows as an Analysis of Covariance (ANCOVA).
 
 ## How `factor:factor` interactions are reported in output
 
@@ -370,45 +368,47 @@ summary(lm(resp ~ level * pos, test))$coefficients[,1, drop=F]
 
 ## How `factor:factor` interactions are interpreted
 
-Mean response value when level=low and position=left
+* Mean response value when level=low and position=left
 
-$10.0399$
+     + $10.0399$
 
-Mean response value when level=low and position=center
+* Mean response value when level=low and position=center
 
-$10.0399 - 0.4225 = 9.6174$
+     + $10.0399 - 0.4225 = 9.6174$
 
-Mean response value when level=high and position=right
+* Mean response value when level=high and position=right
 
-$10.0399 + 14.7078 + 0.6645 - 0.3188 = 25.0934$
+     + $10.0399 + 14.7078 + 0.6645 - 0.3188 = 25.0934$
 
-This is also known as a 2-Factor Analysis of Variance (ANOVA).
+* This is also known as a 2-Factor Analysis of Variance (ANOVA).
 
 
 ## Linear Modeling vs. ANOVA
 
-Two sides of the same coin.
+* Two sides of the same coin.
 
-Linear Model: Do levels of a categorical variable affect the response?
+     + Linear Model: Do levels of a categorical variable affect the response?
 
-ANOVA: Does the mean response differ between levels of a categorical variable?
+     + ANOVA: Does the mean response differ between levels of a categorical variable?
 
-Do ANOVA same way you fit linear model:
+* Do ANOVA same way you fit linear model:
 
-`aov1 <- aov(Y ~ X1 + X2, data=mydata)`  
-`summary(aov)`
-`TukeyHSD(aov1) # multilple comparisons of means`
+```
+aov1 <- aov(Y ~ X1 + X2, data=mydata)
+summary(aov)
+TukeyHSD(aov1) # multilple comparisons of means
+```
 
 ## More information on Factors
 
-Character variables are automatically treated as factors on import (unless you specify otherwise).
+* Character variables are automatically converted to factors on import if using base `R` functions.
 
-How do you know if a variable is coded as factor? Use `class` or `is.factor`. Can also inspect structure of data frame using `str`.
+* How do you know if a variable is coded as factor? Use `class` or `is.factor`. Can also inspect structure of data frame using `str`.
 
-Calling `summary` on factors produces a table of counts.
+* Calling `summary` on factors produces a table of counts.
 
-Can plot effects of factors with `plot.design`.  
-Example: `plot.design(Y ~ factor, data = mydata)`
+* Can plot effects of factors with `plot.design`.  
+     + Example: `plot.design(Y ~ factor, data = mydata)`
 
 Let's go to the R script.
 
@@ -416,16 +416,16 @@ Let's go to the R script.
 
 ## Regression Diagnostics
 
-Estimation and inference from a linear model depend on several assumptions. 
+* Estimation and inference from a linear model depend on several assumptions. 
 
-We check these assumptions using _regression diagnostics_. We assume...
+* We check these assumptions using _regression diagnostics_. We assume...
 
-- errors are independent
-- errors have constant variance 
-- errors are normally distributed
-- all observations "fit" the model and none have large influence on the model
+     + errors are independent
+     + errors have constant variance 
+     + errors are normally distributed
+     + all observations "fit" the model and none have large influence on the model
 
-Violations of these assumptions can invalidate our model.
+* Violations of these assumptions can invalidate our model.
 
 ## Quick visual diagnostics using `plot`
 
@@ -457,18 +457,19 @@ Let's go to R.
 
 ## Updating linear models
 
-After fitting a model, looking at coefficients and their standard errors, and examining diagnostics, we frequently need to update the model.
+* After fitting a model, looking at coefficients and their standard errors, and examining diagnostics, we frequently need to update the model.
 
-This means removing or adding predictors and/or removing observations.
+* This means removing or adding predictors and/or removing observations.
 
-Adding/removing predictors can be accomplished with the `update` function.
+* Adding/removing predictors can be accomplished with the `update` function.
 
-Removing observations can be accomplished with the `subset=` argument in the `lm` function
+* Removing observations can be accomplished with the `subset=` argument in the `lm` function
 
 
 ## Model selection
 
-The task of adding or removing predictors is often referred to as _model selection_ or _variable selection_.
+The task of adding or removing predictors is often referred to as _model selection_ or _variable selection_.   
+\ 
 
 Reasons for using a subset of predictors instead of all of them:
 
@@ -490,87 +491,89 @@ Also expect to use a great deal of subjective judgment.
 
 ## Testing-based approach
 
-Compare nested models with a _partial F-test_ using the `anova` function.
+- Compare nested models with a _partial F-test_ using the `anova` function. For example:
 
-For example:
 ```
 lm1 <- lm(y ~ x1 + x2 + x3 + x4)
 lm2 <- update(lm1, . ~ . - x3 - x4) 
 anova(lm2, lm1)
 ```
 
-Null hypothesis: both models the same (smaller model fits just as well as bigger model).
+- Null hypothesis: both models the same (smaller model fits just as well as bigger model).
 
-A low p-value says reject null; the larger model has more explanatory power.
+- A low p-value says reject null; the larger model has more explanatory power.
 
 
 ## Criterion-based approach - AIC
 
-One common criteria is the Akaike Information Criterion (AIC).
+- One common criteria is the Akaike Information Criterion (AIC).
 
-We want to minimize AIC.
+- We want to minimize AIC.
 
-This approach requires _no hypothesis testing_ unlike the testing-based procedure. 
+- This approach requires _no hypothesis testing_ unlike the testing-based procedure. 
 
-Use the `step` function in R to execute a search method that compares models sequentially.
+- Use the `step` function in R to execute a search method that compares models sequentially.
 
 Back to the R script.
 
 ## Logistic Regression
 
-Sometimes our response is binary: yes/no, success/failure, diseased/non-diseased, etc. Usually coded as 1 and 0.
+* Sometimes our response is binary: yes/no, success/failure, diseased/non-diseased, etc. Usually coded as 1 and 0.
 
-We use logistic regression to model the _log odds_ of binary response.
+* We use logistic regression to model the _log odds_ of binary response.
 
-Let $p$ be the probability that response is 1. Then the linear model is
+* Let $p$ be the probability that response is 1. Then the linear model is
 
 $$log(\frac{p}{1-p}) = \beta_0 + \beta_1 x_1 + \cdots + \beta_k x_k$$
 
 
 ## Converting log odds to probability
 
-We usually transform log odds to probability when making predictions.
+* We usually transform log odds to probability when making predictions.
 
-Say $log(\frac{p}{1-p}) = x$. We transform to probability as follows:
+* Say $log(\frac{p}{1-p}) = x$. We transform to probability as follows:
 
 $$p = \frac{e^x}{1 + e^x}$$
 
-R can easily do this for us.
+* R can easily do this for us.
 
 ## Doing Logistic Regression in R
 
-Logistic regression is a type of _generalized linear model_ (GLM).
+* Logistic regression is a type of _generalized linear model_ (GLM).
 
-We fit GLM models in R using the `glm()` function. It works like the `lm()` function except we specify which GLM to fit using the `family` argument.
+* We fit GLM models in R using the `glm()` function. It works like the `lm()` function except we specify which GLM to fit using the `family` argument.
 
-Logistic regression requires `family=binomial`.
+* Logistic regression requires `family=binomial`. Example:
 
-`mod <- glm(y ~ x, data=yourdata, family=binomial)`  
-`summary(mod)`  
-`fitted(mod) # gives predicted probabilities`
+```
+mod <- glm(y ~ x, data=yourdata, family=binomial)
+summary(mod)
+fitted(mod) # gives predicted probabilities
+```
 
 Let's go to R.
 
 ## References
 
-Faraway, J. (2005). _Linear Models in R_. London: Chapman & Hall.
+* Faraway, J. (2005). _Linear Models in R_. London: Chapman & Hall.
 
-Fox, J. (2002). _A R and S-Plus Companion to Applied Regression_. London: Sage.
+* Fox, J. (2002). _A R and S-Plus Companion to Applied Regression_. London: Sage.
 
-James, G., et al. (2013). _An Introduction to Statistical Learning_. New York: Springer.
+* James, G., et al. (2013). _An Introduction to Statistical Learning_. New York: Springer.
 
-Kutner, M., et al. (2005) _Applied Linear Statistical Models_ (5th ed.). New York: McGraw-Hill.
+* Kutner, M., et al. (2005) _Applied Linear Statistical Models_ (5th ed.). New York: McGraw-Hill.
 
-Maindonald J., Braun, J.W. (2010). _Data Analysis and Graphics Using R_ (3rd ed.). Cambridge: Cambridge Univ Press.
+* Maindonald J., Braun, J.W. (2010). _Data Analysis and Graphics Using R_ (3rd ed.). Cambridge: Cambridge Univ Press.
 
 
 ## StatLab
 
-Thanks for coming today!
+* Thanks for coming today!
 
-For help and advice with your data analysis, contact the StatLab to set up an appointment: statlab@virginia.edu
+* For help and advice with your data analysis, contact the StatLab to set up an appointment: statlab@virginia.edu
 
-Sign up for more workshops or see past workshops:
-http://data.library.virginia.edu/statlab/
+* Sign up for more workshops or see past workshops:
+http://data.library.virginia.edu/training/
 
-Register for the Research Data Services newsletter to stay up-to-date on StatLab events and resources: http://data.library.virginia.edu/newsletters/
+* Register for the Research Data Services newsletter to stay up-to-date on StatLab events and resources: http://data.library.virginia.edu/newsletters/
+
