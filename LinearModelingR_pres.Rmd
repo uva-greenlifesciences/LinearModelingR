@@ -111,7 +111,6 @@ Two basic functions:
 
 Good idea to visually examine your data before building a model. Helps you...
 
-- identify potential models
 - spot potential outliers or errors
 - determine if transformations may be necessary
 
@@ -278,7 +277,9 @@ Let's go to R.
 
 * So far we have only considered numerical predictors. What about categorical predictors such as Male/Female, Democrat/Republican/Independent, Low/Medium/High, etc.?
 
-* R treats categorical predictors as _factors_.
+* R requires categorical predictors be encoded as _factors_.
+
+* A factor is a set of integer codes with associated _levels_. With categorical variables encoded as factors, R automatically and correctly incorporates them into a linear model.
 
 * Either define a variable as a factor in a data frame or in the `lm` formula:   
     + `prostate$gleason.score <- factor(prostate$gleason.score)`    
@@ -286,9 +287,10 @@ Let's go to R.
 
 * Recommended to define variable as factor in the data frame.
 
+
 ## How factors are modeled
 
-- Factors are modeled using _treatment contrasts_.
+- By default factors are modeled using _treatment contrasts_.
 
 - This means one level is treated as baseline and the other levels have coefficients that express change from baseline.
 
@@ -324,6 +326,8 @@ summary(lm(resp ~ level, test))$coefficients[,1, drop=F]
 
 ## How factors work in interactions
 
+* If the effect of a variable depends on another variable, we say the variables _interact_.
+
 * Interacting factors with other factors yields parameter estimates for all combinations of levels.
 
 * Interacting factors with numeric variables yields a separate parameter estimate for the numeric variable at each level of the factor.
@@ -342,7 +346,7 @@ summary(lm(resp ~ level * num, test))$call
 summary(lm(resp ~ level * num, test))$coefficients[,1, drop=F]
 ```
 
-## How `factor:numeric` interactions are interpreted
+## How `factor:numeric` interactions work
 
 * With one factor and one numeric, this is a _varying intercept and slope_ model. The intercept and slope vary based on the level.
 
@@ -366,7 +370,7 @@ summary(lm(resp ~ level * pos, test))$coefficients[,1, drop=F]
 ```
 
 
-## How `factor:factor` interactions are interpreted
+## How `factor:factor` interactions work
 
 * Mean response value when level=low and position=left
 
@@ -381,6 +385,18 @@ summary(lm(resp ~ level * pos, test))$coefficients[,1, drop=F]
      + $10.0399 + 14.7078 + 0.6645 - 0.3188 = 25.0934$
 
 * This is also known as a 2-Factor Analysis of Variance (ANOVA).
+
+## Interpreting coefficients when a model has interactions
+
+- If we include an interaction in our model for $X_{1}$ and $X_{2}$, then we cannot directly interpret the coefficients for$X_{1}$ and $X_{2}$. Their effects depend on each other.
+
+- To get an idea of how they interact we can create an interaction plot or visualize the model using a package such as `visreg`.
+
+- We usually want to find out if the interaction is significant. We can do this with the `anova` function.
+
+- The `anova` function tells us whether or not the interaction appears to explain a significant amount of variation in our response. 
+
+- Judge the significance of an interaction based on the `anova` output, not the (possibly many) individual hypothesis tests in the linear model output. 
 
 
 ## Linear Modeling vs. ANOVA
@@ -484,7 +500,8 @@ Reasons for using a subset of predictors instead of all of them:
 1. Testing-based approach: compare successive models using hypothesis tests
 2. Criterion-based approach: optimize a measure of goodness
 
-Which to choose? That's up to you. Whatever you do, expect to do some experimentation and iteration to find better models.
+Which to choose? That's up to you. Whatever you do, expect to do some experimentation and iteration to find better models.  
+\ 
 
 Also expect to use a great deal of subjective judgment. 
 
@@ -516,42 +533,15 @@ anova(lm2, lm1)
 
 Back to the R script.
 
-## Logistic Regression
+## More R packages for modeling
 
-* Sometimes our response is binary: yes/no, success/failure, diseased/non-diseased, etc. Usually coded as 1 and 0.
+- `effects`: visualizing model effects; similar to `visreg` but with a few more features
 
-* We use logistic regression to model the _log odds_ of binary response.
+- `broom`: Convert statistical analysis objects into tidy data frames; great if you want to do further analysis or plotting of statistical results; works great with `dplyr` and `ggplot2`
 
-* Let $p$ be the probability that response is 1. Then the linear model is
+- `lme4`: fit linear mixed-effect models
 
-$$log(\frac{p}{1-p}) = \beta_0 + \beta_1 x_1 + \cdots + \beta_k x_k$$
-
-
-## Converting log odds to probability
-
-* We usually transform log odds to probability when making predictions.
-
-* Say $log(\frac{p}{1-p}) = x$. We transform to probability as follows:
-
-$$p = \frac{e^x}{1 + e^x}$$
-
-* R can easily do this for us.
-
-## Doing Logistic Regression in R
-
-* Logistic regression is a type of _generalized linear model_ (GLM).
-
-* We fit GLM models in R using the `glm()` function. It works like the `lm()` function except we specify which GLM to fit using the `family` argument.
-
-* Logistic regression requires `family=binomial`. Example:
-
-```
-mod <- glm(y ~ x, data=yourdata, family=binomial)
-summary(mod)
-fitted(mod) # gives predicted probabilities
-```
-
-Let's go to R.
+- `coefplot`: plot model coefficients; visualize coefficient magnitudes along with their standard errors
 
 ## References
 
@@ -561,7 +551,7 @@ Let's go to R.
 
 * James, G., et al. (2013). _An Introduction to Statistical Learning_. New York: Springer.
 
-* Kutner, M., et al. (2005) _Applied Linear Statistical Models_ (5th ed.). New York: McGraw-Hill.
+* Kutner, M., et al. (2005). _Applied Linear Statistical Models_ (5th ed.). New York: McGraw-Hill.
 
 * Maindonald J., Braun, J.W. (2010). _Data Analysis and Graphics Using R_ (3rd ed.). Cambridge: Cambridge Univ Press.
 

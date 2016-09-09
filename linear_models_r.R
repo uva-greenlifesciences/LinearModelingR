@@ -3,9 +3,8 @@
 # UVA StatLab
 # Fall 2016
 
-# Tips:
-# 1. Ctrl + Enter to submit commands
-# 2. Use Tab to complete a command
+# Ctrl + Enter to submit commands
+
 
 # packages used in this workshop
 # Only issue these commands if you haven't already installed these packages
@@ -19,7 +18,7 @@ library(visreg)
 # simple linear regression ------------------------------------------------
 
 # let's use a data set that comes with R: cars
-# Speed and Stopping Distances of Cars
+# Speed and Stopping Distances of Cars in the 1920s
 cars
 # investigate data
 str(cars)
@@ -47,6 +46,10 @@ summary(cars.lm)
 sm1 <- summary(cars.lm)
 names(sm1)
 sm1$sigma
+sm1$coefficients
+
+# In RStudio, typing sm1$ will reveal all the elements in the object. Try it!
+
 
 # Extractor functions:
 # model coefficients (ie, the betas)
@@ -64,6 +67,11 @@ resid(cars.lm)
 plot(dist ~ speed, data=cars)
 abline(cars.lm)
 # note: abline() only works for simple linear regression
+
+# plot fitted versus observed
+plot(x = cars$dist, y = fitted(cars.lm))
+# add a diagonal line (slope = 1)
+abline(a = 0, b = 1)
 
 
 # multiple linear regression ----------------------------------------------
@@ -91,9 +99,11 @@ pairs(pros)
 # scatterplotMatrix() from the car package
 scatterplotMatrix(pros)
 # look at just first 4 columns of data
-scatterplotMatrix(pros[,c(1:4)])
+scatterplotMatrix(pros[,1:4])
+
 
 # some observations:
+# psa and volume is skewed right
 # svi appears to be a factor with levels of 0 and 1
 # gleason score is discrete
 # weight has an outlier (data entry error?)
@@ -126,7 +136,6 @@ coef(m1)
 fitted(m1) # on log scale
 exp(fitted(m1)) # transformed back to original scale
 
-# what about standard errors, R-squared? How to extract those?
 # save the summary
 m1s <- summary(m1)
 names(m1s)
@@ -134,6 +143,20 @@ m1s$coefficients
 m1s$r.squared
 m1s$sigma # residual standard error
 
+# plot fitted versus observered
+plot(x = pros$logpsa, y = fitted(m1))
+abline(0,1)
+
+# YOUR TURN!
+
+# The trees data set that comes with R provides measurements of the girth,
+# height and volume of timber in 31 felled black cherry trees.
+str(trees)
+pairs(trees)
+
+# Model Volume as a function of Height and Girth. Save the model as tree.mod
+tree.mod <- lm(Volume ~ Height + Girth, data = trees)
+summary(tree.mod)
 
 # back to presentation
 
@@ -145,7 +168,8 @@ confint(m1) # 95%
 confint(m1, level=0.90)
 confint(m1,"volume")
 
-# confidence intervals for predictions
+
+# confidence intervals for predictions using new data
 
 # first need to generate new data.
 # the predict() function requires that new data be in data frame.
@@ -184,8 +208,18 @@ visreg(m1)
 # median for numeric variables and most common category for factors).
 
 # see upcoming workshop, Visualizing Model Effects, for more on this topic.
+# (Thurs, Oct 13, 2016)
 
-# back to presentation.
+# YOUR TURN!
+
+# (1) Find 95% confident intervals for the coefficients in the model you fit 
+# earlier, tree.mod:
+confint(tree.mod)
+
+# (2) Use visreg to viualize the model, tree.mod:
+visreg(tree.mod)
+
+# back to presentation!
 
 # model formula and specifications ----------------------------------------
 
@@ -194,24 +228,42 @@ m1
 # this fits the same model:
 # drop psa and fit everything else in the data frame
 pros$psa <- NULL
+# logpsa ~ . means fit the model using all remaining variables
 m1 <- lm(logpsa ~ ., data=pros)
 m1
 
 # model with volume and weight and their interaction
 m2 <- lm(logpsa ~ volume + weight + volume:weight, data=pros)
 summary(m2)
-# same thing
+# same thing using *
 m2 <- lm(logpsa ~ volume * weight, data=pros)
 summary(m2)
+
+# model with 3 predictors and all 2-way interactions
+m3 <- lm(logpsa ~ volume + weight + svi + volume:weight + 
+           volume:svi + weight:svi, data=pros)
+summary(m3)
+# same thing using ^
+m3 <- lm(logpsa ~ (volume + weight + svi)^2, data=pros)
+summary(m3)
 
 # polynomial regression: need to use use I()
 m4 <- lm(logpsa ~ volume + I(volume^2), data=pros)
 summary(m4)
 visreg(m4)
 
+# YOUR TURN!
+
+# Fit a model using the trees data with Volume modeled as a function of Height,
+# Girth and the interaction of Height and Girth.
+tree.mod2 <- lm(Volume ~ Height * Girth, data = trees)
+summary(tree.mod2)
+
 # back to presentation.
 
-# factors and contrasts ---------------------------------------------------
+
+
+# factors, contrasts and interactions -------------------------------------
 
 # Gleason score and svi could be treated as factors instead of numbers
 pros$gleason.score
@@ -281,7 +333,16 @@ summary(fm3)
 anova(fm3) 
 
 # Type II tests: test predictors after all others (except interactions)
-Anova(fm3) # CAR function
+Anova(fm3) # car package function
+
+# The interaction is reported the same in both. There appears to be no interaction.
+
+# Since we can't directly interpret the effects of svi and gleason.score, we can
+# use visreg to see how they interact:
+visreg(fm3, xvar = "svi", by = "gleason.score")
+visreg(fm3, xvar = "gleason.score", by = "svi")
+
+# This supports the insignificant interaction result.
 
 # linear model where gleason.score interacted with volume (factor:numeric)
 # (aka, Analysis of Covariance - ANCOVA)
@@ -300,6 +361,25 @@ fm4 <- lm(logpsa ~ gleason.score*log(volume), pros)
 summary(fm4)
 # slope not 0, but the relationship between logpsa and volume doesn't appear to
 # change for different levels of gleason score.
+
+# Again we can evaluate effects using anova() or Anova()
+anova(fm4)
+Anova(fm4)
+
+# Again the interaction is reported the same in each and is not significant.
+
+# we can visualize the model using visreg as well
+visreg(fm4, xvar = "volume", by = "gleason.score")
+# using the log transformation
+visreg(fm4, xvar = "volume", by = "gleason.score", xtrans = log)
+
+
+# YOUR TURN!
+
+# Use visreg to visualize the interaction in the tree.mod2 model. Set xvar = 
+# "Height" and by = "Girth".  
+visreg(tree.mod2, xvar = "Height", by = "Girth")
+
 
 # back to presentation
 
@@ -326,20 +406,34 @@ pros[32,]
 plot(residuals(m1) ~ volume , data=pros)
 plot(residuals(m1) ~ weight , data=pros)
 
+# observations appear indepdendent, but weight clearly has a large influential
+# observation.
 
-# Model Selection ---------------------------------------------------------
+# YOUR TURN!
 
-# let's fit a new model with svi and gleason.score as factors
+# Use plot() on the tree.mod2 model object to assess the model assumptions.
+plot(tree.mod2)
+
+# back to presentation
+
+
+# Updating Models and Model Selection -------------------------------------
+
+
+# let's fit a new model with all predictors, including svi and gleason.score as
+# factors
 m1 <- lm(logpsa ~ ., data=pros) 
 summary(m1)
+
+op <- par(mfrow = c(2,2))
 plot(m1) 
 
 # 32 very influential
 
 # update model without obs 32 using update() function
 m2 <- update(m1, subset = -32)
-summary(m2)
 plot(m2)
+
 
 summary(m1)
 summary(m2) # weight now appears marginally significant
@@ -366,7 +460,6 @@ summary(step.out) # final model
 # same as what we selected using anova()
 
 # let's check diagnostics of original model
-par(mfrow=c(2,2))
 plot(pros.lm)
 
 # obs 32 is very influential
@@ -376,89 +469,13 @@ summary(pros.lm1)
 # now weight is signficant at 0.05 level and bph marginally significant 
 # at 0.10 level
 plot(pros.lm1)
-par(mfrow=c(1,1))
 
 # model selection with obs 32 removed
 step(pros.lm1)
 
 # AIC selects a different model based on 1 observation being removed.
 
-# back to presentation
-
-# Logistic Regression -----------------------------------------------------
-
-# low birth weight data (from Applied Logistic Regression, 2nd ed.)
-# Selected variables:
-# LOW = birth weight < 2500 g (1 = yes, 0 = no)
-# SMOKE = smoking status during pregnancy
-# AGE = age of mother in years
-# RACE = race of mother (1 = white, 2 = black, 3 = other)
-# LWT = weight of mother in pounds
-
-# lowbirth <- read.csv("data/lowbirth.csv")
-lowbirth <- read.csv("http://people.virginia.edu/~jcf2d/workshops/lmr/lowbirth.csv")
-# define RACE and SMOKE as a factor (ie, a categorical variable)
-lowbirth$RACE <- factor(lowbirth$RACE)
-lowbirth$SMOKE <- factor(lowbirth$SMOKE)
-
-# Is low birth weight related to the factors above?
-
-# investigate data
-summary(lowbirth)
-
-# investigate relationships
-with(lowbirth,table(RACE, LOW))
-with(lowbirth,table(SMOKE, LOW))
-with(lowbirth,table(RACE, LOW, SMOKE))
-boxplot(LWT ~ LOW, data=lowbirth)
-boxplot(AGE ~ LOW, data=lowbirth)
-
-# fit logistic regression using glm(); note family=binomial
-lb.glm <- glm(LOW ~ AGE + SMOKE + RACE + LWT, data=lowbirth, 
-              family=binomial)
-summary(lb.glm)
-
-# fit logistic model without AGE
-lb2.glm <- update(lb.glm, . ~ . - AGE)
-summary(lb2.glm)
-
-# compare models - hypothesis test
-anova(lb2.glm, lb.glm, test = "Chisq")
-# can also search for a model with step()
-step(lb.glm)
-
-# Result: smaller model fits just as well as larger model
-
-# Interpretation of coefficients
-coef(lb2.glm) # log odds
-exp(coef(lb2.glm)) # odds ratios
-exp(confint(lb2.glm)) # CI for odds ratios
-
-# visualization of probabilities with visreg
-
-# By default, conditional plots in visreg are constructed by filling in other 
-# explanatory variables with the median (for numeric variables) or most common 
-# category (for factors)
-
-# median LWT = 121; most common SMOKE = 0; most common RACE = 1
-par(mfrow=c(2,2))
-visreg(lb2.glm, scale="response")
-par(mfrow=c(1,1))
-
-# change in probabilities over LWT by RACE
-visreg(lb2.glm, "LWT", by="RACE", scale="response",
-       main="SMOKE = 0") # SMOKE = 0
-visreg(lb2.glm, "LWT", by="RACE", cond=list(SMOKE=1), scale="response",
-       main="SMOKE = 1") # SMOKE = 1
-
-# change in probabilities over LWT by SMOKE
-visreg(lb2.glm, "LWT", by="SMOKE", scale="response", 
-       main="RACE = white") # RACE = 1
-visreg(lb2.glm, "LWT", by="SMOKE", cond=list(RACE=2), scale="response",
-       main="RACE = black") # RACE = 2
-visreg(lb2.glm, "LWT", by="SMOKE", cond=list(RACE=3), scale="response",
-       main="RACE = other") # RACE = 3
-
+par(op) # reset graphic parameters
 
 
 # END
