@@ -24,7 +24,7 @@ cars
 str(cars)
 summary(cars)
 
-# scatterplot
+# scatterplot: y ~ x
 plot(dist ~ speed, data=cars)
 
 # scatterplot() from the car package
@@ -68,11 +68,6 @@ plot(dist ~ speed, data=cars)
 abline(cars.lm)
 # note: abline() only works for simple linear regression
 
-# plot fitted versus observed
-plot(x = cars$dist, y = fitted(cars.lm))
-# add a diagonal line (slope = 1)
-abline(a = 0, b = 1)
-
 
 # multiple linear regression ----------------------------------------------
 
@@ -90,24 +85,40 @@ abline(a = 0, b = 1)
 # gleason.score - Gleason score
 
 # can we model PSA as a linear function of other variables?
-# pros <- read.csv("prostate.csv")
 pros <- read.csv("http://people.virginia.edu/~jcf2d/workshops/lmr/prostate.csv")
 str(pros)
 summary(pros)
+
+# pairwise scatterplots
 pairs(pros)
 
 # scatterplotMatrix() from the car package
 scatterplotMatrix(pros)
 # look at just first 4 columns of data
-scatterplotMatrix(pros[,1:4])
+scatterplotMatrix(pros[1:4])
+scatterplotMatrix(pros[5:8])
 
+# closer look at psa and volume
+scatterplot(psa ~ volume, data = pros)
+
+# identify the extreme points automatically
+scatterplot(psa ~ volume, data = pros, id.n = 3)
+
+# view those observations
+pros[c(94,96,97),]
+
+# closer look at psa and volume by gleason.score
+scatterplot(psa ~ volume | gleason.score, data = pros)
+
+# remove the smoother lines
+scatterplot(psa ~ volume | gleason.score, data = pros, smoother = FALSE)
 
 # some observations:
-# psa and volume is skewed right
+# psa and volume are skewed right
 # svi appears to be a factor with levels of 0 and 1
 # gleason score is discrete
 # weight has an outlier (data entry error?)
-# bph has a lot of 0's
+# bph and cap.pen both have a lot of 0's
 
 # check distribution of PSA, our response
 hist(pros$psa) # skewed right
@@ -138,12 +149,11 @@ exp(fitted(m1)) # transformed back to original scale
 
 # save the summary
 m1s <- summary(m1)
-names(m1s)
 m1s$coefficients
 m1s$r.squared
 m1s$sigma # residual standard error
 
-# plot fitted versus observered
+# plotting fitted values versus observered values can give us some indication of model "fit"
 plot(x = pros$logpsa, y = fitted(m1))
 abline(0,1)
 
@@ -152,11 +162,13 @@ abline(0,1)
 # The trees data set that comes with R provides measurements of the girth,
 # height and volume of timber in 31 felled black cherry trees.
 str(trees)
-pairs(trees)
+summary(trees)
 
-# Model Volume as a function of Height and Girth. Save the model as tree.mod
-tree.mod <- lm(Volume ~ Height + Girth, data = trees)
-summary(tree.mod)
+# (1) Use scatterplotMatrix to visualize the trees data.
+# (2) Model Volume as a function of Height and Girth and save the model as "tree.mod" 
+# (3) View the model summary. 
+
+
 
 # back to presentation
 
@@ -186,6 +198,7 @@ pros.new
 # predict logpsa using "new" data:
 # predicted mean with interval
 predict(m1, newdata=pros.new, interval = "confidence")
+exp(predict(m1, newdata=pros.new, interval = "confidence")) # original scale
 
 # predicted value with interval
 predict(m1, newdata=pros.new, interval = "prediction")
@@ -195,17 +208,20 @@ predict(m1, newdata=pros.new, interval = "prediction")
 plot(dist ~ speed, data=cars)
 # visreg() from the visreg package makes this easy:
 visreg(cars.lm)
-# change appearance (cex = character expansion; pch=plotting character)
-visreg(cars.lm, 
-       points=list(cex=1, pch=1), 
-       line=list(col="black"))
 
-# what happens if we try this?
+# what happens if we try this with our prostate linear model?
 visreg(m1)
 
-# Answer: shows the value of the variable on the x-axis and the change in
-# response on the y-axis, holding all other variables constant (by default,
-# median for numeric variables and most common category for factors).
+# Answer: shows the value of the variable on the x-axis and the change in 
+# response on the y-axis, holding all other variables constant (by default, 
+# median for numeric variables and most common category for factors). The 
+# plotted points are partial residuals, which can help us detect nonlinearity.
+
+# We can specify the "constant" values we wish to use:
+visreg(m1, cond = list(svi=1, 
+                       gleason.score=8, 
+                       volume=mean(pros$volume)))
+
 
 # see upcoming workshop, Visualizing Model Effects, for more on this topic.
 # (Thurs, Oct 13, 2016)
@@ -214,10 +230,12 @@ visreg(m1)
 
 # (1) Find 95% confident intervals for the coefficients in the model you fit 
 # earlier, tree.mod:
-confint(tree.mod)
+
 
 # (2) Use visreg to viualize the model, tree.mod:
-visreg(tree.mod)
+
+
+
 
 # back to presentation!
 
@@ -250,14 +268,13 @@ summary(m3)
 # polynomial regression: need to use use I()
 m4 <- lm(logpsa ~ volume + I(volume^2), data=pros)
 summary(m4)
-visreg(m4)
+
 
 # YOUR TURN!
 
 # Fit a model using the trees data with Volume modeled as a function of Height,
 # Girth and the interaction of Height and Girth.
-tree.mod2 <- lm(Volume ~ Height * Girth, data = trees)
-summary(tree.mod2)
+
 
 # back to presentation.
 
@@ -282,8 +299,12 @@ summary(pros$svi)
 class(pros$gleason.score)
 is.factor(pros$gleason.score)
 
-# Note: when a variable is all zeros and ones, making it a factor won't change
-# its model coefficient. 
+# Note 1: when a variable is all zeros and ones, making it a factor won't change
+# its model coefficient.
+
+# Note 2: we could make gleason.score an "ordered" factor, to indicate 6 < 7 < 8. 
+# R treats ordered factors differently from regular unordered factors when it
+# comes to modeling. Instead of dummy variables it creates polynomial scores.
 
 # summary stats
 # mean psa for each gleason.score group and boxplots
@@ -348,12 +369,10 @@ visreg(fm3, xvar = "gleason.score", by = "svi")
 # (aka, Analysis of Covariance - ANCOVA)
 
 # plot interaction of factor and numeric:
-scatterplot(logpsa ~ volume | gleason.score, 
-            data=pros, smooth=F)
+scatterplot(logpsa ~ volume | gleason.score, pros, smooth=F)
 
 # let's log transform volume:
-scatterplot(logpsa ~ log(volume) | 
-              gleason.score, data=pros, smooth=F)
+scatterplot(logpsa ~ log(volume) | gleason.score, pros, smooth=F)
 
 # now fit the model
 # Is there a difference in slopes for each level of gleason.score?
@@ -376,9 +395,11 @@ visreg(fm4, xvar = "volume", by = "gleason.score", xtrans = log)
 
 # YOUR TURN!
 
-# Use visreg to visualize the interaction in the tree.mod2 model. Set xvar = 
-# "Height" and by = "Girth".  
-visreg(tree.mod2, xvar = "Height", by = "Girth")
+# Use visreg to visualize the interaction in the tree.mod2 model. 
+
+# Set xvar = "Height" and by = "Girth". 
+
+# This is a numeric:numeric interaction. How do we interpret the plot?
 
 
 # back to presentation
@@ -390,9 +411,9 @@ visreg(tree.mod2, xvar = "Height", by = "Girth")
 plot(m1)
 
 # make all plots fit in one graphic
-par(mfrow=c(2,2)) 
+op <- par(mfrow=c(2,2)) 
 plot(m1)
-par(mfrow=c(1,1)) # restore to previous setting
+par(op) # restore to previous setting
 
 # observation 32 appears to be very influential
 pros[32,]
@@ -411,8 +432,9 @@ plot(residuals(m1) ~ weight , data=pros)
 
 # YOUR TURN!
 
-# Use plot() on the tree.mod2 model object to assess the model assumptions.
-plot(tree.mod2)
+# Use plot() on the tree.mod2 model object to assess the model assumptions. How
+# does everything look?
+
 
 # back to presentation
 
@@ -438,44 +460,49 @@ plot(m2)
 summary(m1)
 summary(m2) # weight now appears marginally significant
 
-# let's fit a new model (leaving in obs 32)
-pros.lm <- lm(logpsa ~ weight + volume + svi + bph + age, data=pros) 
-summary(pros.lm)
-# let's say we want to drop weight and age 
 
-# create new model without weight and age
-pros.lm2 <- update(pros.lm, . ~ . - weight - age)
+# create new model without cap.pen, weight and age
+pros.lm2 <- update(m1, . ~ . - cap.pen - weight - age)
 summary(pros.lm2)
 
 # compare models using anova()
 # syntax: anova(smaller model, larger model)
-anova(pros.lm2,pros.lm)
+anova(pros.lm2,m1)
 
 # Result: fail to reject null; smaller model fits just as well as larger model
 
 # Using AIC to select a model
-step.out <- step(pros.lm)
+step.out <- step(m1)
 step.out
 summary(step.out) # final model
 # same as what we selected using anova()
 
-# let's check diagnostics of original model
-plot(pros.lm)
+# recall diagnostics of original model
+plot(m1)
 
 # obs 32 is very influential
-# fit model without obs 32
-pros.lm1 <- update(pros.lm, subset= -32) 
-summary(pros.lm1)
-# now weight is signficant at 0.05 level and bph marginally significant 
-# at 0.10 level
-plot(pros.lm1)
 
-# model selection with obs 32 removed
-step(pros.lm1)
+# recall we fit model without obs 32
+summary(m2)
+plot(m2)
 
-# AIC selects a different model based on 1 observation being removed.
+
+# create new model without cap.pen, weight and age AND obs 32 removed
+# notice we're updating model m2
+pros.lm2 <- update(m2, . ~ . - cap.pen - weight - age)
+summary(pros.lm2)
+
+# compare models using anova()
+anova(pros.lm2,m2)
+
+# AIC model selection with obs 32 removed
+step(m2)
+
+# AIC selects a different model based on 1 observation being removed. It kept
+# weight.
 
 par(op) # reset graphic parameters
+
 
 
 # END
